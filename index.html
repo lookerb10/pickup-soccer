@@ -108,6 +108,12 @@
   .refresh-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
   .spinner-row{text-align:center;padding:30px;color:var(--ink-soft);font-size:13px;}
 
+  .board-msg{padding:14px 16px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--card);}
+  .board-msg-header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;}
+  .board-msg-author{font-weight:700;font-size:14px;}
+  .board-msg-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  .board-msg-text{font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+
   .lock-icon{opacity:0.55;}
   .organizer-actions{display:flex;justify-content:flex-end;margin-top:8px;}
   .divider-note{font-size:11.5px;color:var(--ink-soft);margin-top:14px;line-height:1.5;}
@@ -126,6 +132,8 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="join">Join</button>
       <button class="tab-btn" data-tab="roster">Roster</button>
+      <button class="tab-btn" data-tab="board">Board</button>
+      <button class="tab-btn" data-tab="ideas">Ideas</button>
       <button class="tab-btn" data-tab="organizer">Organizer</button>
     </div>
   </div>
@@ -261,6 +269,63 @@
     <div id="rosterList"></div>
   </section>
 
+  <!-- BOARD TAB -->
+  <section id="tab-board" style="display:none;">
+    <div class="card">
+      <div class="eyebrow">Post a message</div>
+      <label class="field">
+        <span class="lbl">Name *</span>
+        <input type="text" id="b-name" placeholder="Your name">
+      </label>
+      <label class="field" style="margin-bottom:0;">
+        <span class="lbl">Message *</span>
+        <textarea id="b-message" placeholder="Say something to the group — no phone or email needed. Drop your Discord, Instagram, or whatever's easiest for people to reach you."></textarea>
+      </label>
+      <div id="boardMsg"></div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-primary btn-block" id="postBtn">Post</button>
+      </div>
+    </div>
+    <div class="refresh-row" style="margin-top:20px;">
+      <span class="pill-count" id="boardCount"></span>
+      <button class="btn btn-ghost" id="refreshBoardBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
+    </div>
+    <div id="boardList"></div>
+  </section>
+
+  <!-- IDEAS / SUGGESTIONS TAB -->
+  <section id="tab-ideas" style="display:none;">
+    <div class="card">
+      <div class="eyebrow">Send a suggestion</div>
+      <label class="field">
+        <span class="lbl">Name</span>
+        <input type="text" id="s-name" placeholder="Optional — anonymous is fine">
+      </label>
+      <label class="field">
+        <span class="lbl">Category</span>
+        <select id="s-category">
+          <option>Site feedback</option>
+          <option>Game format / rules</option>
+          <option>Where / when we play</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label class="field" style="margin-bottom:0;">
+        <span class="lbl">Suggestion *</span>
+        <textarea id="s-text" placeholder="What would make this better?"></textarea>
+      </label>
+      <div id="ideaMsg"></div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-primary btn-block" id="ideaSubmitBtn">Send suggestion</button>
+      </div>
+    </div>
+    <div class="refresh-row" style="margin-top:20px;">
+      <span class="pill-count" id="ideaCount"></span>
+      <button class="btn btn-ghost" id="refreshIdeasBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
+    </div>
+    <div id="ideaList"></div>
+  </section>
+
   <!-- ORGANIZER TAB -->
   <section id="tab-organizer" style="display:none;">
     <div class="card" id="organizerGate">
@@ -280,25 +345,131 @@
   let roster = null; // cached array
   let organizerUnlocked = false;
 
-  // ---------- storage helpers ----------
+  // ---------- Supabase config ----------
+  const SUPABASE_URL = 'https://qcxwuajdclgxfbvvtbsg.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjeHd1YWpkY2xneGZidnZ0YnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTE3NTMsImV4cCI6MjA5OTI4Nzc1M30.a3fOQEnPsGkrNPBEohjSBTNAal2bvPQhypAlYlU9yVk';
+
+  async function sb(path, options={}){
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      ...options,
+      headers:{
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type':'application/json',
+        ...(options.headers||{})
+      }
+    });
+    if(!res.ok){
+      const body = await res.text().catch(()=> '');
+      throw new Error(`Supabase ${res.status}: ${body}`);
+    }
+    return res;
+  }
+
+  function rowToEntry(row){
+    return {
+      id: row.id,
+      jerseyNumber: row.jersey_number,
+      name: row.name,
+      phone: row.phone,
+      email: row.email,
+      frequency: row.frequency,
+      experience: row.experience,
+      intensity: row.intensity,
+      position: row.position,
+      age: row.age,
+      notes: row.notes,
+      availability: row.availability || [],
+      visibility: row.visibility,
+      submittedAt: row.submitted_at
+    };
+  }
+
+  // ---------- storage helpers (Supabase-backed) ----------
   async function getRoster(){
     try{
-      const res = await window.storage.get('roster', true);
-      return res && res.value ? JSON.parse(res.value) : [];
+      const res = await sb('entries?select=*&order=jersey_number.asc');
+      const rows = await res.json();
+      return rows.map(rowToEntry);
     }catch(e){
       return [];
     }
   }
-  async function saveRoster(arr){
-    return window.storage.set('roster', JSON.stringify(arr), true);
+  async function insertEntry(entry){
+    const res = await sb('entries', {
+      method:'POST',
+      headers:{ 'Prefer':'return=representation' },
+      body: JSON.stringify({
+        name: entry.name, phone: entry.phone, email: entry.email,
+        frequency: entry.frequency, experience: entry.experience, intensity: entry.intensity,
+        position: entry.position, age: entry.age, notes: entry.notes,
+        availability: entry.availability, visibility: entry.visibility
+      })
+    });
+    const rows = await res.json();
+    return rowToEntry(rows[0]);
+  }
+  async function deleteEntry(id){
+    return sb(`entries?id=eq.${id}`, { method:'DELETE' });
   }
   async function getPin(){
     try{
-      const res = await window.storage.get('organizer-pin', true);
-      return res ? res.value : null;
+      const res = await sb('settings?key=eq.organizer_pin&select=value');
+      const rows = await res.json();
+      return rows.length ? rows[0].value : null;
     }catch(e){
       return null;
     }
+  }
+  async function setPin(val){
+    return sb('settings', {
+      method:'POST',
+      headers:{ 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify({ key:'organizer_pin', value: val })
+    });
+  }
+  async function getMessages(){
+    try{
+      const res = await sb('messages?select=*&order=created_at.desc');
+      return await res.json();
+    }catch(e){
+      return [];
+    }
+  }
+  async function insertMessage(author, message){
+    const res = await sb('messages', {
+      method:'POST',
+      headers:{ 'Prefer':'return=representation' },
+      body: JSON.stringify({ author, message })
+    });
+    const rows = await res.json();
+    return rows[0];
+  }
+  async function deleteMessage(id){
+    return sb(`messages?id=eq.${id}`, { method:'DELETE' });
+  }
+  function formatMsgTime(iso){
+    return new Date(iso).toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+  }
+  async function getSuggestions(){
+    try{
+      const res = await sb('suggestions?select=*&order=created_at.desc');
+      return await res.json();
+    }catch(e){
+      return [];
+    }
+  }
+  async function insertSuggestion(author, category, text){
+    const res = await sb('suggestions', {
+      method:'POST',
+      headers:{ 'Prefer':'return=representation' },
+      body: JSON.stringify({ author: author || null, category, suggestion: text })
+    });
+    const rows = await res.json();
+    return rows[0];
+  }
+  async function deleteSuggestion(id){
+    return sb(`suggestions?id=eq.${id}`, { method:'DELETE' });
   }
 
   // ---------- tabs ----------
@@ -306,6 +477,8 @@
   const panels = {
     join: document.getElementById('tab-join'),
     roster: document.getElementById('tab-roster'),
+    board: document.getElementById('tab-board'),
+    ideas: document.getElementById('tab-ideas'),
     organizer: document.getElementById('tab-organizer'),
   };
   tabBtns.forEach(btn=>{
@@ -316,6 +489,8 @@
       const tab = btn.dataset.tab;
       panels[tab].style.display='block';
       if(tab==='roster') renderRosterTab();
+      if(tab==='board') renderBoardTab();
+      if(tab==='ideas') renderIdeasTab();
       if(tab==='organizer') renderOrganizerTab();
     });
   });
@@ -377,19 +552,12 @@
     btn.textContent = 'Adding you…';
 
     try{
-      const current = await getRoster();
-      const entry = {
-        id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
-        jerseyNumber: current.length+1,
+      const entry = await insertEntry({
         name, phone, email, frequency, experience, intensity, position, age, notes,
-        availability, visibility,
-        submittedAt: new Date().toISOString()
-      };
-      current.push(entry);
-      const result = await saveRoster(current);
-      if(!result) throw new Error('save failed');
+        availability, visibility
+      });
 
-      roster = current;
+      roster = [...(roster||[]), entry];
       await updateScoreStat();
 
       // success panel
@@ -462,7 +630,124 @@
   }
   document.getElementById('refreshRosterBtn').addEventListener('click', renderRosterTab);
 
+  // ---------- board tab ----------
+  async function renderBoardTab(){
+    const listEl = document.getElementById('boardList');
+    const countEl = document.getElementById('boardCount');
+    listEl.innerHTML = '<div class="spinner-row">Loading messages…</div>';
+    const msgs = await getMessages();
+    countEl.textContent = `${msgs.length} message${msgs.length===1?'':'s'}`;
+
+    if(msgs.length===0){
+      listEl.innerHTML = `<div class="empty-state"><div class="display">No messages yet</div><p>Be the first to say something to the group.</p></div>`;
+      return;
+    }
+
+    listEl.innerHTML = msgs.map(m=>`
+      <div class="board-msg">
+        <div class="board-msg-header">
+          <span class="board-msg-author">${escapeHtml(m.author)}</span>
+          <span class="board-msg-time">${formatMsgTime(m.created_at)}</span>
+        </div>
+        <div class="board-msg-text">${escapeHtml(m.message)}</div>
+      </div>`).join('');
+  }
+  document.getElementById('refreshBoardBtn').addEventListener('click', renderBoardTab);
+
+  document.getElementById('postBtn').addEventListener('click', async ()=>{
+    const msgEl = document.getElementById('boardMsg');
+    msgEl.innerHTML = '';
+    const author = document.getElementById('b-name').value.trim();
+    const message = document.getElementById('b-message').value.trim();
+    if(!author || !message){
+      msgEl.innerHTML = '<div class="msg msg-error">Enter your name and a message.</div>';
+      return;
+    }
+    const btn = document.getElementById('postBtn');
+    btn.disabled = true;
+    btn.textContent = 'Posting…';
+    try{
+      await insertMessage(author, message);
+      document.getElementById('b-message').value = '';
+      msgEl.innerHTML = '<div class="msg msg-success">Posted!</div>';
+      await renderBoardTab();
+    }catch(e){
+      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong posting your message. Please try again.</div>';
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Post';
+    }
+  });
+
+  // ---------- ideas tab ----------
+  async function renderIdeasTab(){
+    const listEl = document.getElementById('ideaList');
+    const countEl = document.getElementById('ideaCount');
+    listEl.innerHTML = '<div class="spinner-row">Loading suggestions…</div>';
+    const ideas = await getSuggestions();
+    countEl.textContent = `${ideas.length} suggestion${ideas.length===1?'':'s'}`;
+
+    if(ideas.length===0){
+      listEl.innerHTML = `<div class="empty-state"><div class="display">No suggestions yet</div><p>Got an idea for the games or the site? Add it above.</p></div>`;
+      return;
+    }
+
+    listEl.innerHTML = ideas.map(s=>`
+      <div class="board-msg">
+        <div class="board-msg-header">
+          <span class="board-msg-author">${escapeHtml(s.author || 'Anonymous')}</span>
+          <span class="board-msg-time">${formatMsgTime(s.created_at)}</span>
+        </div>
+        <div class="tag-row" style="margin-bottom:8px;"><span class="tag">${escapeHtml(s.category)}</span></div>
+        <div class="board-msg-text">${escapeHtml(s.suggestion)}</div>
+      </div>`).join('');
+  }
+  document.getElementById('refreshIdeasBtn').addEventListener('click', renderIdeasTab);
+
+  document.getElementById('ideaSubmitBtn').addEventListener('click', async ()=>{
+    const msgEl = document.getElementById('ideaMsg');
+    msgEl.innerHTML = '';
+    const author = document.getElementById('s-name').value.trim();
+    const category = document.getElementById('s-category').value;
+    const text = document.getElementById('s-text').value.trim();
+    if(!text){
+      msgEl.innerHTML = '<div class="msg msg-error">Enter a suggestion first.</div>';
+      return;
+    }
+    const btn = document.getElementById('ideaSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try{
+      await insertSuggestion(author, category, text);
+      document.getElementById('s-text').value = '';
+      msgEl.innerHTML = '<div class="msg msg-success">Thanks — sent!</div>';
+      await renderIdeasTab();
+    }catch(e){
+      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong sending your suggestion. Please try again.</div>';
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Send suggestion';
+    }
+  });
+
   // ---------- organizer tab ----------
+  async function getOrganizerContact(){
+    try{
+      const res = await sb('settings?key=eq.organizer_contact&select=value');
+      const rows = await res.json();
+      return rows.length ? JSON.parse(rows[0].value) : null;
+    }catch(e){
+      return null;
+    }
+  }
+  async function setOrganizerContact(contact){
+    return sb('settings', {
+      method:'POST',
+      headers:{ 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify({ key:'organizer_contact', value: JSON.stringify(contact) })
+    });
+  }
+
   async function renderOrganizerTab(){
     const gate = document.getElementById('organizerGate');
     if(organizerUnlocked){
@@ -470,44 +755,80 @@
     }
     gate.innerHTML = '<div class="spinner-row">Loading…</div>';
     const pin = await getPin();
+    const contact = await getOrganizerContact();
 
-    if(!pin){
-      gate.innerHTML = `
-        <div class="eyebrow">Set up organizer access</div>
-        <p style="font-size:13.5px;color:var(--ink-soft);">No organizer passphrase is set yet. Set one now — you'll use it to view and manage private sign-ups. Share it only with whoever organizes the games.</p>
-        <label class="field"><span class="lbl">Choose a passphrase</span><input type="text" id="pinSetup"></label>
+    const contactBlock = (contact && (contact.name || contact.phone || contact.email))
+      ? `
+        <div class="eyebrow" style="margin-top:0;">Organizer contact</div>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:10px;">Questions, or need to reach the organizer directly?</p>
+        <div style="font-weight:700;font-size:15px;">${escapeHtml(contact.name || 'Organizer')}</div>
+        <div class="mono" style="font-size:12.5px;color:var(--ink-soft);margin-top:3px;">
+          ${[contact.phone, contact.email].filter(Boolean).map(escapeHtml).join(' · ') || 'No contact details on file'}
+        </div>`
+      : `
+        <div class="eyebrow" style="margin-top:0;">Organizer contact</div>
+        <p style="font-size:13.5px;color:var(--ink-soft);">No organizer contact info has been added yet.</p>`;
+
+    gate.innerHTML = `${contactBlock}<div id="orgLoginArea" style="margin-top:24px;"></div>`;
+
+    const loginArea = document.getElementById('orgLoginArea');
+
+    const showLoginToggle = ()=>{
+      loginArea.innerHTML = `<div style="text-align:right;"><button class="btn btn-ghost" id="orgLoginToggleBtn" style="font-size:11px;padding:5px 10px;opacity:0.65;">Organizer login</button></div>`;
+      document.getElementById('orgLoginToggleBtn').addEventListener('click', showLoginForm);
+    };
+
+    const showLoginForm = ()=>{
+      if(!pin){
+        loginArea.innerHTML = `
+          <div class="eyebrow">Set up organizer access</div>
+          <p style="font-size:13.5px;color:var(--ink-soft);">Add your contact info (shown publicly above so players can reach you) and choose a passphrase for managing sign-ups.</p>
+          <label class="field"><span class="lbl">Your name</span><input type="text" id="orgName"></label>
+          <div class="grid2">
+            <label class="field"><span class="lbl">Phone</span><input type="tel" id="orgPhone"></label>
+            <label class="field"><span class="lbl">Email</span><input type="email" id="orgEmail"></label>
+          </div>
+          <label class="field"><span class="lbl">Choose a passphrase</span><input type="text" id="pinSetup"></label>
+          <div id="pinMsg"></div>
+          <button class="btn btn-primary btn-block" id="setPinBtn">Save &amp; unlock</button>`;
+        document.getElementById('setPinBtn').addEventListener('click', async ()=>{
+          const val = document.getElementById('pinSetup').value.trim();
+          const msgEl = document.getElementById('pinMsg');
+          if(!val){ msgEl.innerHTML = '<div class="msg msg-error">Enter a passphrase first.</div>'; return; }
+          try{
+            await setPin(val);
+            await setOrganizerContact({
+              name: document.getElementById('orgName').value.trim(),
+              phone: document.getElementById('orgPhone').value.trim(),
+              email: document.getElementById('orgEmail').value.trim()
+            });
+            organizerUnlocked = true;
+            renderOrganizerFull();
+          }catch(e){
+            msgEl.innerHTML = '<div class="msg msg-error">Could not save. Try again.</div>';
+          }
+        });
+        return;
+      }
+
+      loginArea.innerHTML = `
+        <div class="eyebrow">Organizer login</div>
+        <label class="field"><span class="lbl">Passphrase</span><input type="text" id="pinEntry"></label>
         <div id="pinMsg"></div>
-        <button class="btn btn-primary btn-block" id="setPinBtn">Set passphrase &amp; unlock</button>`;
-      document.getElementById('setPinBtn').addEventListener('click', async ()=>{
-        const val = document.getElementById('pinSetup').value.trim();
+        <button class="btn btn-primary btn-block" id="unlockBtn">Unlock</button>`;
+      document.getElementById('unlockBtn').addEventListener('click', async ()=>{
+        const val = document.getElementById('pinEntry').value.trim();
         const msgEl = document.getElementById('pinMsg');
-        if(!val){ msgEl.innerHTML = '<div class="msg msg-error">Enter a passphrase first.</div>'; return; }
-        try{
-          await window.storage.set('organizer-pin', val, true);
+        if(val===pin){
           organizerUnlocked = true;
           renderOrganizerFull();
-        }catch(e){
-          msgEl.innerHTML = '<div class="msg msg-error">Could not save the passphrase. Try again.</div>';
+        }else{
+          msgEl.innerHTML = '<div class="msg msg-error">Incorrect passphrase.</div>';
         }
       });
-      return;
-    }
+    };
 
-    gate.innerHTML = `
-      <div class="eyebrow">Organizer access</div>
-      <label class="field"><span class="lbl">Enter organizer passphrase</span><input type="text" id="pinEntry"></label>
-      <div id="pinMsg"></div>
-      <button class="btn btn-primary btn-block" id="unlockBtn">Unlock</button>`;
-    document.getElementById('unlockBtn').addEventListener('click', async ()=>{
-      const val = document.getElementById('pinEntry').value.trim();
-      const msgEl = document.getElementById('pinMsg');
-      if(val===pin){
-        organizerUnlocked = true;
-        renderOrganizerFull();
-      }else{
-        msgEl.innerHTML = '<div class="msg msg-error">Incorrect passphrase.</div>';
-      }
-    });
+    showLoginToggle();
   }
 
   async function renderOrganizerFull(){
@@ -516,6 +837,8 @@
     const arr = await getRoster();
     roster = arr;
     const sorted = [...arr].sort((a,b)=>a.jerseyNumber-b.jerseyNumber);
+    const msgs = await getMessages();
+    const ideas = await getSuggestions();
 
     const rows = sorted.map(p=>{
       const contactLine = [p.phone, p.email].filter(Boolean).map(escapeHtml).join(' · ') || '—';
@@ -533,12 +856,73 @@
         </div>`;
     }).join('') || `<div class="empty-state"><div class="display">No sign-ups yet</div></div>`;
 
+    const msgRows = msgs.map(m=>`
+      <div class="board-msg">
+        <div class="board-msg-header">
+          <span class="board-msg-author">${escapeHtml(m.author)}</span>
+          <span class="board-msg-time">${formatMsgTime(m.created_at)}</span>
+        </div>
+        <div class="board-msg-text">${escapeHtml(m.message)}</div>
+        <div class="organizer-actions"><button class="btn btn-danger" data-remove-msg="${m.id}">Delete</button></div>
+      </div>`).join('') || `<div class="empty-state"><div class="display">No messages</div></div>`;
+
+    const ideaRows = ideas.map(s=>`
+      <div class="board-msg">
+        <div class="board-msg-header">
+          <span class="board-msg-author">${escapeHtml(s.author || 'Anonymous')}</span>
+          <span class="board-msg-time">${formatMsgTime(s.created_at)}</span>
+        </div>
+        <div class="tag-row" style="margin-bottom:8px;"><span class="tag">${escapeHtml(s.category)}</span></div>
+        <div class="board-msg-text">${escapeHtml(s.suggestion)}</div>
+        <div class="organizer-actions"><button class="btn btn-danger" data-remove-idea="${s.id}">Delete</button></div>
+      </div>`).join('') || `<div class="empty-state"><div class="display">No suggestions</div></div>`;
+
     gate.innerHTML = `
-      <div class="eyebrow" style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="eyebrow" style="display:flex;justify-content:space-between;align-items:center;margin-top:0;">
         <span>Full roster (${sorted.length})</span>
-        <button class="btn btn-ghost" id="lockBtn" style="padding:6px 12px;font-size:12px;">Lock</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" id="editContactBtn" style="padding:6px 12px;font-size:12px;">Edit my contact info</button>
+          <button class="btn btn-ghost" id="lockBtn" style="padding:6px 12px;font-size:12px;">Lock</button>
+        </div>
       </div>
-      ${rows}`;
+      ${rows}
+      <div class="eyebrow">Board messages (${msgs.length})</div>
+      ${msgRows}
+      <div class="eyebrow">Suggestions (${ideas.length})</div>
+      ${ideaRows}`;
+
+    document.getElementById('editContactBtn').addEventListener('click', async ()=>{
+      const contact = (await getOrganizerContact()) || {};
+      const formHtml = `
+        <div class="card" style="margin-bottom:16px;">
+          <div class="eyebrow" style="margin-top:0;">Edit organizer contact info</div>
+          <label class="field"><span class="lbl">Name</span><input type="text" id="editOrgName" value="${escapeHtml(contact.name||'')}"></label>
+          <div class="grid2">
+            <label class="field"><span class="lbl">Phone</span><input type="tel" id="editOrgPhone" value="${escapeHtml(contact.phone||'')}"></label>
+            <label class="field"><span class="lbl">Email</span><input type="email" id="editOrgEmail" value="${escapeHtml(contact.email||'')}"></label>
+          </div>
+          <div id="editContactMsg"></div>
+          <div style="display:flex;gap:10px;margin-top:12px;">
+            <button class="btn btn-primary" id="saveContactBtn" style="flex:1;">Save</button>
+            <button class="btn btn-ghost" id="cancelContactBtn" style="flex:1;">Cancel</button>
+          </div>
+        </div>`;
+      gate.insertAdjacentHTML('afterbegin', formHtml);
+      document.getElementById('cancelContactBtn').addEventListener('click', renderOrganizerFull);
+      document.getElementById('saveContactBtn').addEventListener('click', async ()=>{
+        const msgEl = document.getElementById('editContactMsg');
+        try{
+          await setOrganizerContact({
+            name: document.getElementById('editOrgName').value.trim(),
+            phone: document.getElementById('editOrgPhone').value.trim(),
+            email: document.getElementById('editOrgEmail').value.trim()
+          });
+          renderOrganizerFull();
+        }catch(e){
+          msgEl.innerHTML = '<div class="msg msg-error">Could not save. Try again.</div>';
+        }
+      });
+    });
 
     document.getElementById('lockBtn').addEventListener('click', ()=>{
       organizerUnlocked = false;
@@ -548,9 +932,22 @@
       btn.addEventListener('click', async ()=>{
         btn.disabled = true; btn.textContent='Removing…';
         const id = btn.dataset.remove;
-        const updated = (await getRoster()).filter(p=>p.id!==id);
-        await saveRoster(updated);
+        await deleteEntry(id);
         await updateScoreStat();
+        renderOrganizerFull();
+      });
+    });
+    gate.querySelectorAll('[data-remove-msg]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true; btn.textContent='Removing…';
+        await deleteMessage(btn.dataset.removeMsg);
+        renderOrganizerFull();
+      });
+    });
+    gate.querySelectorAll('[data-remove-idea]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true; btn.textContent='Removing…';
+        await deleteSuggestion(btn.dataset.removeIdea);
         renderOrganizerFull();
       });
     });
