@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pickup Soccer — Sign-Up &amp; Roster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch:#1B4332;
+    --pitch-dark:#0F2A1E;
+    --chalk:#F1F4EC;
+    --card:#FFFFFF;
+    --ink:#16211A;
+    --ink-soft:#54655A;
+    --cone:#FF7A33;
+    --cone-dark:#E0611E;
+    --turf:#7BAE7F;
+    --line:#DCE3D5;
+    --danger:#C24B4B;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--chalk);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .display{font-family:'Bebas Neue',sans-serif;letter-spacing:0.02em;}
+
+  /* Scoreboard header */
+  .scoreboard{background:var(--pitch-dark);color:var(--chalk);padding:28px 20px 0;}
+  .scoreboard-inner{max-width:760px;margin:0 auto;}
+  .scoreboard h1{display:none;} /* replaced by title below */
+  .title-row{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .title{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:0.03em;margin:0;color:var(--chalk);}
+  .stat-line{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--turf);text-transform:uppercase;letter-spacing:0.08em;}
+  .tabs{display:flex;gap:4px;margin-top:20px;background:rgba(255,255,255,0.06);padding:4px;border-radius:10px;max-width:520px;}
+  .tab-btn{flex:1;border:none;background:transparent;color:rgba(241,244,236,0.65);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;padding:11px 8px;border-radius:7px;cursor:pointer;transition:background .15s ease, color .15s ease;}
+  .tab-btn.active{background:var(--cone);color:#1B1400;font-weight:600;}
+  .tab-btn:not(.active):hover{background:rgba(255,255,255,0.08);color:var(--chalk);}
+  .tab-btn:focus-visible{outline:2px solid var(--turf);outline-offset:2px;}
+  .scoreboard-pad{height:22px;}
+
+  main{max-width:760px;margin:0 auto;padding:24px 20px 80px;}
+
+  .card{background:var(--card);border-radius:14px;padding:24px;box-shadow:0 1px 2px rgba(15,42,30,0.06), 0 8px 24px -14px rgba(15,42,30,0.25);}
+  .card + .card{margin-top:16px;}
+
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--turf);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:16px;font-weight:600;}
+  .eyebrow:not(:first-child){margin-top:26px;}
+
+  label.field{display:block;margin-bottom:16px;}
+  label.field .lbl{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px;color:var(--ink);}
+  label.field .hint{display:block;font-size:12px;color:var(--ink-soft);margin-top:4px;}
+  input[type=text], input[type=tel], input[type=email], select, textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);background:#FDFEFC;transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  input:focus, select:focus, textarea:focus{outline:none;border-color:var(--pitch);box-shadow:0 0 0 3px rgba(27,67,50,0.12);}
+  textarea{resize:vertical;min-height:64px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;}
+  @media (max-width:560px){.grid2{grid-template-columns:1fr;}}
+
+  .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;}
+  @media (max-width:480px){.check-grid{grid-template-columns:1fr;}}
+  .check-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13.5px;transition:border-color .15s ease, background .15s ease;}
+  .check-item:hover{border-color:var(--turf);}
+  .check-item input{width:auto;accent-color:var(--pitch);}
+  .check-item.checked{background:rgba(123,174,127,0.12);border-color:var(--turf);}
+
+  .radio-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .radio-card{flex:1;min-width:180px;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s ease, background .15s ease;}
+  .radio-card input{accent-color:var(--pitch);margin-right:8px;}
+  .radio-card .rc-title{font-weight:600;font-size:13.5px;}
+  .radio-card .rc-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;margin-left:22px;}
+  .radio-card.selected{border-color:var(--pitch);background:rgba(27,67,50,0.05);}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:9px;padding:12px 20px;font-family:'Inter',sans-serif;font-weight:600;font-size:14.5px;cursor:pointer;transition:transform .1s ease, box-shadow .15s ease, background .15s ease;}
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--cone);color:#241600;}
+  .btn-primary:hover{background:var(--cone-dark);}
+  .btn-primary:focus-visible{outline:2px solid var(--pitch-dark);outline-offset:2px;}
+  .btn-ghost{background:transparent;color:var(--pitch);border:1.5px solid var(--pitch);}
+  .btn-ghost:hover{background:rgba(27,67,50,0.06);}
+  .btn-danger{background:transparent;color:var(--danger);border:1.5px solid var(--danger);padding:7px 12px;font-size:12.5px;}
+  .btn-danger:hover{background:rgba(194,75,75,0.08);}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn-block{width:100%;}
+
+  .msg{font-size:13px;padding:10px 12px;border-radius:8px;margin-top:12px;}
+  .msg-error{background:rgba(194,75,75,0.1);color:var(--danger);}
+  .msg-success{background:rgba(123,174,127,0.18);color:#245229;}
+
+  .success-panel{text-align:center;padding:20px 10px;}
+  .jersey-big{width:64px;height:64px;border-radius:50%;background:var(--cone);color:#241600;font-family:'Bebas Neue',sans-serif;font-size:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+
+  /* Roster */
+  .player-card{display:flex;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--card);}
+  .player-card.private{background:#FAFAF7;}
+  .jersey{flex-shrink:0;width:42px;height:42px;border-radius:50%;background:var(--pitch);color:var(--chalk);font-family:'Bebas Neue',sans-serif;font-size:18px;display:flex;align-items:center;justify-content:center;}
+  .player-card.private .jersey{background:#B9C2B2;color:#4B5A50;}
+  .player-name{font-weight:700;font-size:15.5px;}
+  .player-contact{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.03em;text-transform:uppercase;background:rgba(123,174,127,0.15);color:#2C4A2F;padding:3px 8px;border-radius:5px;}
+  .tag.lock{background:rgba(0,0,0,0.06);color:var(--ink-soft);}
+  .notes{font-size:12.5px;color:var(--ink-soft);margin-top:8px;font-style:italic;}
+  .empty-state{text-align:center;padding:40px 16px;color:var(--ink-soft);}
+  .empty-state .display{font-size:22px;color:var(--ink);}
+  .refresh-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .spinner-row{text-align:center;padding:30px;color:var(--ink-soft);font-size:13px;}
+
+  .lock-icon{opacity:0.55;}
+  .organizer-actions{display:flex;justify-content:flex-end;margin-top:8px;}
+  .divider-note{font-size:11.5px;color:var(--ink-soft);margin-top:14px;line-height:1.5;}
+  .pill-count{font-size:12px;color:var(--ink-soft);}
+  a{color:var(--pitch);}
+</style>
+</head>
+<body>
+
+<div class="scoreboard">
+  <div class="scoreboard-inner">
+    <div class="title-row">
+      <h1 class="title">⚽ Pickup Soccer</h1>
+    </div>
+    <div class="stat-line" id="scoreStat">Loading roster…</div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="join">Join</button>
+      <button class="tab-btn" data-tab="roster">Roster</button>
+      <button class="tab-btn" data-tab="organizer">Organizer</button>
+    </div>
+  </div>
+  <div class="scoreboard-pad"></div>
+</div>
+
+<main>
+
+  <!-- JOIN TAB -->
+  <section id="tab-join">
+    <div class="card">
+      <div class="eyebrow">Basics</div>
+      <label class="field">
+        <span class="lbl">Name *</span>
+        <input type="text" id="f-name" placeholder="Your name">
+      </label>
+      <div class="grid2">
+        <label class="field">
+          <span class="lbl">Phone</span>
+          <input type="tel" id="f-phone" placeholder="(555) 555-5555">
+        </label>
+        <label class="field">
+          <span class="lbl">Email</span>
+          <input type="email" id="f-email" placeholder="you@example.com">
+        </label>
+      </div>
+      <label class="field" style="margin-bottom:0;">
+        <span class="hint">Give at least one way to reach you — this is what other players will use to coordinate.</span>
+      </label>
+
+      <div class="eyebrow">Logistics</div>
+      <label class="field">
+        <span class="lbl">How often do you want to play? *</span>
+        <select id="f-frequency">
+          <option value="">Select one…</option>
+          <option>Every week</option>
+          <option>Every other week</option>
+          <option>Whenever it's organized</option>
+          <option>Just occasionally</option>
+        </select>
+      </label>
+      <label class="field" style="margin-bottom:8px;">
+        <span class="lbl">When are you generally available? *</span>
+        <span class="hint">Pick all that apply — this is how we'll figure out game times.</span>
+      </label>
+      <div class="check-grid" id="f-availability">
+        <label class="check-item" data-slot="wd-morning"><input type="checkbox">Weekday mornings</label>
+        <label class="check-item" data-slot="wd-afternoon"><input type="checkbox">Weekday afternoons</label>
+        <label class="check-item" data-slot="wd-evening"><input type="checkbox">Weekday evenings</label>
+        <label class="check-item" data-slot="we-morning"><input type="checkbox">Weekend mornings</label>
+        <label class="check-item" data-slot="we-afternoon"><input type="checkbox">Weekend afternoons</label>
+        <label class="check-item" data-slot="we-evening"><input type="checkbox">Weekend evenings</label>
+      </div>
+
+      <div class="eyebrow">Preferences</div>
+      <div class="grid2">
+        <label class="field">
+          <span class="lbl">Experience level *</span>
+          <select id="f-experience">
+            <option value="">Select one…</option>
+            <option>New to organized soccer</option>
+            <option>Casual / recreational experience</option>
+            <option>Competitive / played on a team</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="lbl">Preferred intensity *</span>
+          <select id="f-intensity">
+            <option value="">Select one…</option>
+            <option>Casual &amp; social</option>
+            <option>Competitive</option>
+            <option>Either is fine</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid2">
+        <label class="field">
+          <span class="lbl">Position preference</span>
+          <select id="f-position">
+            <option>No preference</option>
+            <option>Goalkeeper</option>
+            <option>Defender</option>
+            <option>Midfielder</option>
+            <option>Forward</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="lbl">Age range</span>
+          <select id="f-age">
+            <option>Prefer not to say</option>
+            <option>Under 18</option>
+            <option>18–25</option>
+            <option>26–35</option>
+            <option>36–45</option>
+            <option>46+</option>
+          </select>
+        </label>
+      </div>
+      <label class="field">
+        <span class="lbl">Anything else? (injuries, first time playing, etc.)</span>
+        <textarea id="f-notes" placeholder="Optional"></textarea>
+      </label>
+
+      <div class="eyebrow">Privacy</div>
+      <div class="radio-row" id="f-visibility">
+        <label class="radio-card selected" data-value="public">
+          <input type="radio" name="vis" value="public" checked>
+          <span class="rc-title">Public</span>
+          <div class="rc-sub">Everyone on the roster can see your info &amp; contact you</div>
+        </label>
+        <label class="radio-card" data-value="private">
+          <input type="radio" name="vis" value="private">
+          <span class="rc-title">Private</span>
+          <div class="rc-sub">Only the organizer can see your details</div>
+        </label>
+      </div>
+      <div class="divider-note">This page stores sign-ups so the group can coordinate. It's a friendly, not a bank-grade, privacy split — please don't include anything truly sensitive.</div>
+
+      <div id="joinMsg"></div>
+
+      <div style="margin-top:20px;">
+        <button class="btn btn-primary btn-block" id="submitBtn">Add me to the roster</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROSTER TAB -->
+  <section id="tab-roster" style="display:none;">
+    <div class="refresh-row">
+      <span class="pill-count" id="rosterCount"></span>
+      <button class="btn btn-ghost" id="refreshRosterBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
+    </div>
+    <div id="rosterList"></div>
+  </section>
+
+  <!-- ORGANIZER TAB -->
+  <section id="tab-organizer" style="display:none;">
+    <div class="card" id="organizerGate">
+      <div class="spinner-row">Loading…</div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  const AVAILABILITY_LABELS = {
+    'wd-morning':'Weekday AM','wd-afternoon':'Weekday PM','wd-evening':'Weekday eve',
+    'we-morning':'Weekend AM','we-afternoon':'Weekend PM','we-evening':'Weekend eve'
+  };
+
+  let roster = null; // cached array
+  let organizerUnlocked = false;
+
+  // ---------- storage helpers ----------
+  async function getRoster(){
+    try{
+      const res = await window.storage.get('roster', true);
+      return res && res.value ? JSON.parse(res.value) : [];
+    }catch(e){
+      return [];
+    }
+  }
+  async function saveRoster(arr){
+    return window.storage.set('roster', JSON.stringify(arr), true);
+  }
+  async function getPin(){
+    try{
+      const res = await window.storage.get('organizer-pin', true);
+      return res ? res.value : null;
+    }catch(e){
+      return null;
+    }
+  }
+
+  // ---------- tabs ----------
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const panels = {
+    join: document.getElementById('tab-join'),
+    roster: document.getElementById('tab-roster'),
+    organizer: document.getElementById('tab-organizer'),
+  };
+  tabBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      Object.keys(panels).forEach(k=>panels[k].style.display='none');
+      const tab = btn.dataset.tab;
+      panels[tab].style.display='block';
+      if(tab==='roster') renderRosterTab();
+      if(tab==='organizer') renderOrganizerTab();
+    });
+  });
+
+  // ---------- checkbox / radio visual state ----------
+  document.querySelectorAll('#f-availability .check-item').forEach(item=>{
+    const input = item.querySelector('input');
+    item.addEventListener('click', (e)=>{
+      if(e.target.tagName!=='INPUT'){ input.checked = !input.checked; }
+      item.classList.toggle('checked', input.checked);
+    });
+  });
+  document.querySelectorAll('#f-visibility .radio-card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      document.querySelectorAll('#f-visibility .radio-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      card.querySelector('input').checked = true;
+    });
+  });
+
+  // ---------- scoreboard stat ----------
+  async function updateScoreStat(){
+    const arr = await getRoster();
+    roster = arr;
+    const pub = arr.filter(p=>p.visibility==='public').length;
+    const priv = arr.length - pub;
+    const el = document.getElementById('scoreStat');
+    el.textContent = arr.length===0
+      ? 'No one signed up yet — be the first!'
+      : `${arr.length} PLAYER${arr.length===1?'':'S'} SIGNED UP · ${pub} PUBLIC${priv?` · ${priv} PRIVATE`:''}`;
+  }
+  updateScoreStat();
+
+  // ---------- submit ----------
+  document.getElementById('submitBtn').addEventListener('click', async ()=>{
+    const msgEl = document.getElementById('joinMsg');
+    msgEl.innerHTML = '';
+
+    const name = document.getElementById('f-name').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const frequency = document.getElementById('f-frequency').value;
+    const experience = document.getElementById('f-experience').value;
+    const intensity = document.getElementById('f-intensity').value;
+    const position = document.getElementById('f-position').value;
+    const age = document.getElementById('f-age').value;
+    const notes = document.getElementById('f-notes').value.trim();
+    const visibility = document.querySelector('#f-visibility input:checked').value;
+    const availability = Array.from(document.querySelectorAll('#f-availability input:checked'))
+      .map(i=>i.closest('.check-item').dataset.slot);
+
+    if(!name || !frequency || !experience || !intensity || (!phone && !email)){
+      msgEl.innerHTML = '<div class="msg msg-error">Please fill in your name, at least one contact method, frequency, experience, and intensity.</div>';
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Adding you…';
+
+    try{
+      const current = await getRoster();
+      const entry = {
+        id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+        jerseyNumber: current.length+1,
+        name, phone, email, frequency, experience, intensity, position, age, notes,
+        availability, visibility,
+        submittedAt: new Date().toISOString()
+      };
+      current.push(entry);
+      const result = await saveRoster(current);
+      if(!result) throw new Error('save failed');
+
+      roster = current;
+      await updateScoreStat();
+
+      // success panel
+      document.querySelector('#tab-join .card').innerHTML = `
+        <div class="success-panel">
+          <div class="jersey-big">#${entry.jerseyNumber}</div>
+          <div class="display" style="font-size:24px;">You're on the roster, ${escapeHtml(name)}!</div>
+          <p style="color:var(--ink-soft);font-size:13.5px;max-width:400px;margin:10px auto 20px;">
+            ${visibility==='public' ? "Your info is visible to the group on the Roster tab." : "Your details are private — only the organizer can see them."}
+          </p>
+          <button class="btn btn-ghost" id="viewRosterBtn">View the roster →</button>
+        </div>`;
+      document.getElementById('viewRosterBtn').addEventListener('click', ()=>{
+        document.querySelector('[data-tab="roster"]').click();
+      });
+    }catch(e){
+      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong saving your sign-up. Please try again.</div>';
+      btn.disabled = false;
+      btn.textContent = 'Add me to the roster';
+    }
+  });
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function tagList(entry){
+    const tags = [entry.frequency, entry.experience, entry.intensity];
+    if(entry.position && entry.position!=='No preference') tags.push(entry.position);
+    if(entry.age && entry.age!=='Prefer not to say') tags.push(entry.age);
+    (entry.availability||[]).forEach(slot=> tags.push(AVAILABILITY_LABELS[slot] || slot));
+    return tags;
+  }
+
+  // ---------- roster tab ----------
+  async function renderRosterTab(){
+    const listEl = document.getElementById('rosterList');
+    const countEl = document.getElementById('rosterCount');
+    listEl.innerHTML = '<div class="spinner-row">Loading roster…</div>';
+    const arr = await getRoster();
+    roster = arr;
+    const sorted = [...arr].sort((a,b)=>a.jerseyNumber-b.jerseyNumber);
+    const pubCount = arr.filter(p=>p.visibility==='public').length;
+    countEl.textContent = `${arr.length} signed up · ${pubCount} public`;
+
+    if(sorted.length===0){
+      listEl.innerHTML = `<div class="empty-state"><div class="display">No players yet</div><p>Share this page's link — sign-ups will show up here.</p></div>`;
+      return;
+    }
+
+    listEl.innerHTML = sorted.map(p=>{
+      const isPrivate = p.visibility==='private';
+      const contactLine = isPrivate
+        ? `<span class="lock-icon">🔒</span> Private — contact via organizer`
+        : [p.phone, p.email].filter(Boolean).map(escapeHtml).join(' · ');
+      const tags = isPrivate ? [] : tagList(p);
+      return `
+        <div class="player-card ${isPrivate?'private':''}">
+          <div class="jersey">${p.jerseyNumber}</div>
+          <div style="flex:1;">
+            <div class="player-name">${escapeHtml(p.name)}</div>
+            <div class="player-contact">${contactLine}</div>
+            <div class="tag-row">
+              ${tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}
+            </div>
+            ${(!isPrivate && p.notes) ? `<div class="notes">"${escapeHtml(p.notes)}"</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+  document.getElementById('refreshRosterBtn').addEventListener('click', renderRosterTab);
+
+  // ---------- organizer tab ----------
+  async function renderOrganizerTab(){
+    const gate = document.getElementById('organizerGate');
+    if(organizerUnlocked){
+      return renderOrganizerFull();
+    }
+    gate.innerHTML = '<div class="spinner-row">Loading…</div>';
+    const pin = await getPin();
+
+    if(!pin){
+      gate.innerHTML = `
+        <div class="eyebrow">Set up organizer access</div>
+        <p style="font-size:13.5px;color:var(--ink-soft);">No organizer passphrase is set yet. Set one now — you'll use it to view and manage private sign-ups. Share it only with whoever organizes the games.</p>
+        <label class="field"><span class="lbl">Choose a passphrase</span><input type="text" id="pinSetup"></label>
+        <div id="pinMsg"></div>
+        <button class="btn btn-primary btn-block" id="setPinBtn">Set passphrase &amp; unlock</button>`;
+      document.getElementById('setPinBtn').addEventListener('click', async ()=>{
+        const val = document.getElementById('pinSetup').value.trim();
+        const msgEl = document.getElementById('pinMsg');
+        if(!val){ msgEl.innerHTML = '<div class="msg msg-error">Enter a passphrase first.</div>'; return; }
+        try{
+          await window.storage.set('organizer-pin', val, true);
+          organizerUnlocked = true;
+          renderOrganizerFull();
+        }catch(e){
+          msgEl.innerHTML = '<div class="msg msg-error">Could not save the passphrase. Try again.</div>';
+        }
+      });
+      return;
+    }
+
+    gate.innerHTML = `
+      <div class="eyebrow">Organizer access</div>
+      <label class="field"><span class="lbl">Enter organizer passphrase</span><input type="text" id="pinEntry"></label>
+      <div id="pinMsg"></div>
+      <button class="btn btn-primary btn-block" id="unlockBtn">Unlock</button>`;
+    document.getElementById('unlockBtn').addEventListener('click', async ()=>{
+      const val = document.getElementById('pinEntry').value.trim();
+      const msgEl = document.getElementById('pinMsg');
+      if(val===pin){
+        organizerUnlocked = true;
+        renderOrganizerFull();
+      }else{
+        msgEl.innerHTML = '<div class="msg msg-error">Incorrect passphrase.</div>';
+      }
+    });
+  }
+
+  async function renderOrganizerFull(){
+    const gate = document.getElementById('organizerGate');
+    gate.innerHTML = '<div class="spinner-row">Loading full roster…</div>';
+    const arr = await getRoster();
+    roster = arr;
+    const sorted = [...arr].sort((a,b)=>a.jerseyNumber-b.jerseyNumber);
+
+    const rows = sorted.map(p=>{
+      const contactLine = [p.phone, p.email].filter(Boolean).map(escapeHtml).join(' · ') || '—';
+      const tags = tagList(p);
+      return `
+        <div class="player-card">
+          <div class="jersey">${p.jerseyNumber}</div>
+          <div style="flex:1;">
+            <div class="player-name">${escapeHtml(p.name)} ${p.visibility==='private' ? '<span class="tag lock">private</span>' : ''}</div>
+            <div class="player-contact">${contactLine}</div>
+            <div class="tag-row">${tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>
+            ${p.notes ? `<div class="notes">"${escapeHtml(p.notes)}"</div>` : ''}
+            <div class="organizer-actions"><button class="btn btn-danger" data-remove="${p.id}">Remove</button></div>
+          </div>
+        </div>`;
+    }).join('') || `<div class="empty-state"><div class="display">No sign-ups yet</div></div>`;
+
+    gate.innerHTML = `
+      <div class="eyebrow" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Full roster (${sorted.length})</span>
+        <button class="btn btn-ghost" id="lockBtn" style="padding:6px 12px;font-size:12px;">Lock</button>
+      </div>
+      ${rows}`;
+
+    document.getElementById('lockBtn').addEventListener('click', ()=>{
+      organizerUnlocked = false;
+      renderOrganizerTab();
+    });
+    gate.querySelectorAll('[data-remove]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true; btn.textContent='Removing…';
+        const id = btn.dataset.remove;
+        const updated = (await getRoster()).filter(p=>p.id!==id);
+        await saveRoster(updated);
+        await updateScoreStat();
+        renderOrganizerFull();
+      });
+    });
+  }
+
+})();
+</script>
+</body>
+</html>
