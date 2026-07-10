@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -24,7 +24,7 @@
   body{margin:0;background:var(--chalk);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
   .mono{font-family:'IBM Plex Mono',monospace;}
   .display{font-family:'Bebas Neue',sans-serif;letter-spacing:0.02em;}
-
+ 
   /* Scoreboard header */
   .scoreboard{background:var(--pitch-dark);color:var(--chalk);padding:28px 20px 0;}
   .scoreboard-inner{max-width:760px;margin:0 auto;}
@@ -38,15 +38,15 @@
   .tab-btn:not(.active):hover{background:rgba(255,255,255,0.08);color:var(--chalk);}
   .tab-btn:focus-visible{outline:2px solid var(--turf);outline-offset:2px;}
   .scoreboard-pad{height:22px;}
-
+ 
   main{max-width:760px;margin:0 auto;padding:24px 20px 80px;}
-
+ 
   .card{background:var(--card);border-radius:14px;padding:24px;box-shadow:0 1px 2px rgba(15,42,30,0.06), 0 8px 24px -14px rgba(15,42,30,0.25);}
   .card + .card{margin-top:16px;}
-
+ 
   .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--turf);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:16px;font-weight:600;}
   .eyebrow:not(:first-child){margin-top:26px;}
-
+ 
   label.field{display:block;margin-bottom:16px;}
   label.field .lbl{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px;color:var(--ink);}
   label.field .hint{display:block;font-size:12px;color:var(--ink-soft);margin-top:4px;}
@@ -55,24 +55,24 @@
   }
   input:focus, select:focus, textarea:focus{outline:none;border-color:var(--pitch);box-shadow:0 0 0 3px rgba(27,67,50,0.12);}
   textarea{resize:vertical;min-height:64px;}
-
+ 
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;}
   @media (max-width:560px){.grid2{grid-template-columns:1fr;}}
-
+ 
   .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;}
   @media (max-width:480px){.check-grid{grid-template-columns:1fr;}}
   .check-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13.5px;transition:border-color .15s ease, background .15s ease;}
   .check-item:hover{border-color:var(--turf);}
   .check-item input{width:auto;accent-color:var(--pitch);}
   .check-item.checked{background:rgba(123,174,127,0.12);border-color:var(--turf);}
-
+ 
   .radio-row{display:flex;gap:10px;flex-wrap:wrap;}
   .radio-card{flex:1;min-width:180px;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s ease, background .15s ease;}
   .radio-card input{accent-color:var(--pitch);margin-right:8px;}
   .radio-card .rc-title{font-weight:600;font-size:13.5px;}
   .radio-card .rc-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;margin-left:22px;}
   .radio-card.selected{border-color:var(--pitch);background:rgba(27,67,50,0.05);}
-
+ 
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:9px;padding:12px 20px;font-family:'Inter',sans-serif;font-weight:600;font-size:14.5px;cursor:pointer;transition:transform .1s ease, box-shadow .15s ease, background .15s ease;}
   .btn:active{transform:translateY(1px);}
   .btn-primary{background:var(--cone);color:#241600;}
@@ -84,14 +84,14 @@
   .btn-danger:hover{background:rgba(194,75,75,0.08);}
   .btn:disabled{opacity:0.5;cursor:not-allowed;}
   .btn-block{width:100%;}
-
+ 
   .msg{font-size:13px;padding:10px 12px;border-radius:8px;margin-top:12px;}
   .msg-error{background:rgba(194,75,75,0.1);color:var(--danger);}
   .msg-success{background:rgba(123,174,127,0.18);color:#245229;}
-
+ 
   .success-panel{text-align:center;padding:20px 10px;}
   .jersey-big{width:64px;height:64px;border-radius:50%;background:var(--cone);color:#241600;font-family:'Bebas Neue',sans-serif;font-size:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
-
+ 
   /* Roster */
   .player-card{display:flex;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--card);}
   .player-card.private{background:#FAFAF7;}
@@ -107,13 +107,13 @@
   .empty-state .display{font-size:22px;color:var(--ink);}
   .refresh-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
   .spinner-row{text-align:center;padding:30px;color:var(--ink-soft);font-size:13px;}
-
+ 
   .board-msg{padding:14px 16px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--card);}
   .board-msg-header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;}
   .board-msg-author{font-weight:700;font-size:14px;}
   .board-msg-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);white-space:nowrap;}
   .board-msg-text{font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
-
+ 
   .lock-icon{opacity:0.55;}
   .organizer-actions{display:flex;justify-content:flex-end;margin-top:8px;}
   .divider-note{font-size:11.5px;color:var(--ink-soft);margin-top:14px;line-height:1.5;}
@@ -122,7 +122,7 @@
 </style>
 </head>
 <body>
-
+ 
 <div class="scoreboard">
   <div class="scoreboard-inner">
     <div class="title-row">
@@ -139,9 +139,9 @@
   </div>
   <div class="scoreboard-pad"></div>
 </div>
-
+ 
 <main>
-
+ 
   <!-- JOIN TAB -->
   <section id="tab-join">
     <div class="card" style="background:var(--pitch);box-shadow:none;">
@@ -169,7 +169,7 @@
       <label class="field" style="margin-bottom:0;">
         <span class="hint">Give at least one way to reach you — this is what other players will use to coordinate.</span>
       </label>
-
+ 
       <div class="eyebrow">Logistics</div>
       <label class="field">
         <span class="lbl">How often do you want to play? *</span>
@@ -193,7 +193,7 @@
         <label class="check-item" data-slot="we-afternoon"><input type="checkbox">Weekend afternoons</label>
         <label class="check-item" data-slot="we-evening"><input type="checkbox">Weekend evenings</label>
       </div>
-
+ 
       <div class="eyebrow">Preferences</div>
       <div class="grid2">
         <label class="field">
@@ -242,7 +242,7 @@
         <span class="lbl">Anything else? (injuries, first time playing, etc.)</span>
         <textarea id="f-notes" placeholder="Optional"></textarea>
       </label>
-
+ 
       <div class="eyebrow">Privacy</div>
       <div class="radio-row" id="f-visibility">
         <label class="radio-card selected" data-value="public">
@@ -257,15 +257,15 @@
         </label>
       </div>
       <div class="divider-note">This page stores sign-ups so the group can coordinate. It's a friendly, not a bank-grade, privacy split — please don't include anything truly sensitive.</div>
-
+ 
       <div id="joinMsg"></div>
-
+ 
       <div style="margin-top:20px;">
         <button class="btn btn-primary btn-block" id="submitBtn">Add me to the roster</button>
       </div>
     </div>
   </section>
-
+ 
   <!-- ROSTER TAB -->
   <section id="tab-roster" style="display:none;">
     <div class="refresh-row">
@@ -274,7 +274,7 @@
     </div>
     <div id="rosterList"></div>
   </section>
-
+ 
   <!-- BOARD TAB -->
   <section id="tab-board" style="display:none;">
     <div class="card">
@@ -298,7 +298,7 @@
     </div>
     <div id="boardList"></div>
   </section>
-
+ 
   <!-- IDEAS / SUGGESTIONS TAB -->
   <section id="tab-ideas" style="display:none;">
     <div class="card">
@@ -331,30 +331,30 @@
     </div>
     <div id="ideaList"></div>
   </section>
-
+ 
   <!-- ORGANIZER TAB -->
   <section id="tab-organizer" style="display:none;">
     <div class="card" id="organizerGate">
       <div class="spinner-row">Loading…</div>
     </div>
   </section>
-
+ 
 </main>
-
+ 
 <script>
 (function(){
   const AVAILABILITY_LABELS = {
     'wd-morning':'Weekday AM','wd-afternoon':'Weekday PM','wd-evening':'Weekday eve',
     'we-morning':'Weekend AM','we-afternoon':'Weekend PM','we-evening':'Weekend eve'
   };
-
+ 
   let roster = null; // cached array
   let organizerUnlocked = false;
-
+ 
   // ---------- Supabase config ----------
   const SUPABASE_URL = 'https://qcxwuajdclgxfbvvtbsg.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjeHd1YWpkY2xneGZidnZ0YnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTE3NTMsImV4cCI6MjA5OTI4Nzc1M30.a3fOQEnPsGkrNPBEohjSBTNAal2bvPQhypAlYlU9yVk';
-
+ 
   async function sb(path, options={}){
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
       ...options,
@@ -371,7 +371,7 @@
     }
     return res;
   }
-
+ 
   function rowToEntry(row){
     return {
       id: row.id,
@@ -390,7 +390,7 @@
       submittedAt: row.submitted_at
     };
   }
-
+ 
   // ---------- storage helpers (Supabase-backed) ----------
   async function getRoster(){
     try{
@@ -477,7 +477,7 @@
   async function deleteSuggestion(id){
     return sb(`suggestions?id=eq.${id}`, { method:'DELETE' });
   }
-
+ 
   // ---------- tabs ----------
   const tabBtns = document.querySelectorAll('.tab-btn');
   const panels = {
@@ -500,7 +500,7 @@
       if(tab==='organizer') renderOrganizerTab();
     });
   });
-
+ 
   // ---------- checkbox / radio visual state ----------
   document.querySelectorAll('#f-availability .check-item').forEach(item=>{
     const input = item.querySelector('input');
@@ -516,7 +516,7 @@
       card.querySelector('input').checked = true;
     });
   });
-
+ 
   // ---------- scoreboard stat ----------
   async function updateScoreStat(){
     const arr = await getRoster();
@@ -529,12 +529,12 @@
       : `${arr.length} PLAYER${arr.length===1?'':'S'} SIGNED UP · ${pub} PUBLIC${priv?` · ${priv} PRIVATE`:''}`;
   }
   updateScoreStat();
-
+ 
   // ---------- submit ----------
   document.getElementById('submitBtn').addEventListener('click', async ()=>{
     const msgEl = document.getElementById('joinMsg');
     msgEl.innerHTML = '';
-
+ 
     const name = document.getElementById('f-name').value.trim();
     const phone = document.getElementById('f-phone').value.trim();
     const email = document.getElementById('f-email').value.trim();
@@ -547,25 +547,25 @@
     const visibility = document.querySelector('#f-visibility input:checked').value;
     const availability = Array.from(document.querySelectorAll('#f-availability input:checked'))
       .map(i=>i.closest('.check-item').dataset.slot);
-
+ 
     if(!name || !frequency || !experience || !intensity || (!phone && !email)){
       msgEl.innerHTML = '<div class="msg msg-error">Please fill in your name, at least one contact method, frequency, experience, and intensity.</div>';
       return;
     }
-
+ 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.textContent = 'Adding you…';
-
+ 
     try{
       const entry = await insertEntry({
         name, phone, email, frequency, experience, intensity, position, age, notes,
         availability, visibility
       });
-
+ 
       roster = [...(roster||[]), entry];
       await updateScoreStat();
-
+ 
       // success panel
       document.getElementById('joinFormCard').innerHTML = `
         <div class="success-panel">
@@ -585,11 +585,11 @@
       btn.textContent = 'Add me to the roster';
     }
   });
-
+ 
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
-
+ 
   function tagList(entry){
     const tags = [entry.frequency, entry.experience, entry.intensity];
     if(entry.position && entry.position!=='No preference') tags.push(entry.position);
@@ -597,7 +597,7 @@
     (entry.availability||[]).forEach(slot=> tags.push(AVAILABILITY_LABELS[slot] || slot));
     return tags;
   }
-
+ 
   // ---------- roster tab ----------
   async function renderRosterTab(){
     const listEl = document.getElementById('rosterList');
@@ -608,12 +608,12 @@
     const sorted = [...arr].sort((a,b)=>a.jerseyNumber-b.jerseyNumber);
     const pubCount = arr.filter(p=>p.visibility==='public').length;
     countEl.textContent = `${arr.length} signed up · ${pubCount} public`;
-
+ 
     if(sorted.length===0){
       listEl.innerHTML = `<div class="empty-state"><div class="display">No players yet</div><p>Share this page's link — sign-ups will show up here.</p></div>`;
       return;
     }
-
+ 
     listEl.innerHTML = sorted.map(p=>{
       const isPrivate = p.visibility==='private';
       const contactLine = isPrivate
@@ -635,7 +635,7 @@
     }).join('');
   }
   document.getElementById('refreshRosterBtn').addEventListener('click', renderRosterTab);
-
+ 
   // ---------- board tab ----------
   async function renderBoardTab(){
     const listEl = document.getElementById('boardList');
@@ -643,12 +643,12 @@
     listEl.innerHTML = '<div class="spinner-row">Loading messages…</div>';
     const msgs = await getMessages();
     countEl.textContent = `${msgs.length} message${msgs.length===1?'':'s'}`;
-
+ 
     if(msgs.length===0){
       listEl.innerHTML = `<div class="empty-state"><div class="display">No messages yet</div><p>Be the first to say something to the group.</p></div>`;
       return;
     }
-
+ 
     listEl.innerHTML = msgs.map(m=>`
       <div class="board-msg">
         <div class="board-msg-header">
@@ -659,7 +659,7 @@
       </div>`).join('');
   }
   document.getElementById('refreshBoardBtn').addEventListener('click', renderBoardTab);
-
+ 
   document.getElementById('postBtn').addEventListener('click', async ()=>{
     const msgEl = document.getElementById('boardMsg');
     msgEl.innerHTML = '';
@@ -684,7 +684,7 @@
       btn.textContent = 'Post';
     }
   });
-
+ 
   // ---------- ideas tab ----------
   async function renderIdeasTab(){
     const listEl = document.getElementById('ideaList');
@@ -692,12 +692,12 @@
     listEl.innerHTML = '<div class="spinner-row">Loading suggestions…</div>';
     const ideas = await getSuggestions();
     countEl.textContent = `${ideas.length} suggestion${ideas.length===1?'':'s'}`;
-
+ 
     if(ideas.length===0){
       listEl.innerHTML = `<div class="empty-state"><div class="display">No suggestions yet</div><p>Got an idea for the games or the site? Add it above.</p></div>`;
       return;
     }
-
+ 
     listEl.innerHTML = ideas.map(s=>`
       <div class="board-msg">
         <div class="board-msg-header">
@@ -709,7 +709,7 @@
       </div>`).join('');
   }
   document.getElementById('refreshIdeasBtn').addEventListener('click', renderIdeasTab);
-
+ 
   document.getElementById('ideaSubmitBtn').addEventListener('click', async ()=>{
     const msgEl = document.getElementById('ideaMsg');
     msgEl.innerHTML = '';
@@ -735,7 +735,7 @@
       btn.textContent = 'Send suggestion';
     }
   });
-
+ 
   // ---------- organizer tab ----------
   async function getOrganizerContact(){
     try{
@@ -753,7 +753,7 @@
       body: JSON.stringify({ key:'organizer_contact', value: JSON.stringify(contact) })
     });
   }
-
+ 
   async function renderOrganizerTab(){
     const gate = document.getElementById('organizerGate');
     if(organizerUnlocked){
@@ -762,7 +762,7 @@
     gate.innerHTML = '<div class="spinner-row">Loading…</div>';
     const pin = await getPin();
     const contact = await getOrganizerContact();
-
+ 
     const contactBlock = (contact && (contact.name || contact.phone || contact.email))
       ? `
         <div class="eyebrow" style="margin-top:0;">Organizer contact</div>
@@ -774,16 +774,16 @@
       : `
         <div class="eyebrow" style="margin-top:0;">Organizer contact</div>
         <p style="font-size:13.5px;color:var(--ink-soft);">No organizer contact info has been added yet.</p>`;
-
+ 
     gate.innerHTML = `${contactBlock}<div id="orgLoginArea" style="margin-top:24px;"></div>`;
-
+ 
     const loginArea = document.getElementById('orgLoginArea');
-
+ 
     const showLoginToggle = ()=>{
       loginArea.innerHTML = `<div style="text-align:right;"><button class="btn btn-ghost" id="orgLoginToggleBtn" style="font-size:11px;padding:5px 10px;opacity:0.65;">Organizer login</button></div>`;
       document.getElementById('orgLoginToggleBtn').addEventListener('click', showLoginForm);
     };
-
+ 
     const showLoginForm = ()=>{
       if(!pin){
         loginArea.innerHTML = `
@@ -816,7 +816,7 @@
         });
         return;
       }
-
+ 
       loginArea.innerHTML = `
         <div class="eyebrow">Organizer login</div>
         <label class="field"><span class="lbl">Passphrase</span><input type="text" id="pinEntry"></label>
@@ -833,10 +833,10 @@
         }
       });
     };
-
+ 
     showLoginToggle();
   }
-
+ 
   async function renderOrganizerFull(){
     const gate = document.getElementById('organizerGate');
     gate.innerHTML = '<div class="spinner-row">Loading full roster…</div>';
@@ -845,7 +845,7 @@
     const sorted = [...arr].sort((a,b)=>a.jerseyNumber-b.jerseyNumber);
     const msgs = await getMessages();
     const ideas = await getSuggestions();
-
+ 
     const rows = sorted.map(p=>{
       const contactLine = [p.phone, p.email].filter(Boolean).map(escapeHtml).join(' · ') || '—';
       const tags = tagList(p);
@@ -861,7 +861,7 @@
           </div>
         </div>`;
     }).join('') || `<div class="empty-state"><div class="display">No sign-ups yet</div></div>`;
-
+ 
     const msgRows = msgs.map(m=>`
       <div class="board-msg">
         <div class="board-msg-header">
@@ -871,7 +871,7 @@
         <div class="board-msg-text">${escapeHtml(m.message)}</div>
         <div class="organizer-actions"><button class="btn btn-danger" data-remove-msg="${m.id}">Delete</button></div>
       </div>`).join('') || `<div class="empty-state"><div class="display">No messages</div></div>`;
-
+ 
     const ideaRows = ideas.map(s=>`
       <div class="board-msg">
         <div class="board-msg-header">
@@ -882,7 +882,7 @@
         <div class="board-msg-text">${escapeHtml(s.suggestion)}</div>
         <div class="organizer-actions"><button class="btn btn-danger" data-remove-idea="${s.id}">Delete</button></div>
       </div>`).join('') || `<div class="empty-state"><div class="display">No suggestions</div></div>`;
-
+ 
     gate.innerHTML = `
       <div class="eyebrow" style="display:flex;justify-content:space-between;align-items:center;margin-top:0;">
         <span>Full roster (${sorted.length})</span>
@@ -896,7 +896,7 @@
       ${msgRows}
       <div class="eyebrow">Suggestions (${ideas.length})</div>
       ${ideaRows}`;
-
+ 
     document.getElementById('editContactBtn').addEventListener('click', async ()=>{
       const contact = (await getOrganizerContact()) || {};
       const formHtml = `
@@ -929,7 +929,7 @@
         }
       });
     });
-
+ 
     document.getElementById('lockBtn').addEventListener('click', ()=>{
       organizerUnlocked = false;
       renderOrganizerTab();
@@ -958,8 +958,9 @@
       });
     });
   }
-
+ 
 })();
 </script>
 </body>
 </html>
+ 
