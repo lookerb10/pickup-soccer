@@ -34,7 +34,8 @@
   .title{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:0.03em;margin:0;color:var(--chalk);}
   .stat-line{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--turf);text-transform:uppercase;letter-spacing:0.08em;}
   .tabs{display:flex;gap:4px;margin-top:20px;background:rgba(255,255,255,0.06);padding:4px;border-radius:10px;max-width:520px;}
-  .tab-btn{flex:1;border:none;background:transparent;color:rgba(241,244,236,0.65);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;padding:11px 8px;border-radius:7px;cursor:pointer;transition:background .15s ease, color .15s ease;}
+  .tab-btn{position:relative;flex:1;border:none;background:transparent;color:rgba(241,244,236,0.65);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;padding:11px 8px;border-radius:7px;cursor:pointer;transition:background .15s ease, color .15s ease;}
+  .tab-ribbon{position:absolute;top:-6px;right:2px;background:var(--cone);color:#241600;font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;padding:2px 5px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.35);}
   .tab-btn.active{background:var(--cone);color:#1B1400;font-weight:600;}
   .tab-btn:not(.active):hover{background:rgba(255,255,255,0.08);color:var(--chalk);}
   .tab-btn:focus-visible{outline:2px solid var(--turf);outline-offset:2px;}
@@ -115,9 +116,16 @@
   .board-msg-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);white-space:nowrap;}
   .board-msg-text{font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
 
-  .update-banner{border-left:4px solid var(--cone);}
-  .update-banner .eyebrow{margin-top:0;}
-  .update-banner-actions{margin-top:10px;text-align:right;}
+  .comment-list{margin-top:12px;padding-left:14px;border-left:2px solid var(--line);}
+  .comment{margin-bottom:10px;}
+  .comment:last-child{margin-bottom:0;}
+  .comment-author{font-weight:600;font-size:12.5px;}
+  .comment-time{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin-left:6px;}
+  .comment-text{font-size:12.5px;line-height:1.4;white-space:pre-wrap;word-break:break-word;margin-top:2px;}
+  .reply-row{display:flex;gap:6px;margin-top:12px;}
+  .reply-row input.reply-name{width:110px;flex-shrink:0;padding:7px 9px;font-size:12.5px;}
+  .reply-row input.reply-text{flex:1;padding:7px 9px;font-size:12.5px;}
+  .reply-row button{padding:7px 12px;font-size:12.5px;flex-shrink:0;}
 
   .lock-icon{opacity:0.55;}
   .organizer-actions{display:flex;justify-content:flex-end;margin-top:8px;}
@@ -137,8 +145,8 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="join">Join</button>
       <button class="tab-btn" data-tab="roster">Roster</button>
-      <button class="tab-btn" data-tab="board">Board</button>
-      <button class="tab-btn" data-tab="ideas">Ideas</button>
+      <button class="tab-btn" data-tab="board">Board<span class="tab-ribbon" id="boardRibbon" style="display:none;">New</span></button>
+      <button class="tab-btn" data-tab="ideas">Ideas<span class="tab-ribbon" id="ideasRibbon" style="display:none;">New</span></button>
       <button class="tab-btn" data-tab="organizer">Organizer</button>
     </div>
   </div>
@@ -146,8 +154,6 @@
 </div>
 
 <main>
-
-  <div class="card update-banner" id="latestUpdateCard" style="display:none;"></div>
 
   <!-- JOIN TAB -->
   <section id="tab-join">
@@ -511,6 +517,34 @@
   async function deleteSuggestion(id){
     return sb(`suggestions?id=eq.${id}`, { method:'DELETE' });
   }
+  async function getComments(){
+    try{
+      const res = await sb('comments?select=*&order=created_at.asc');
+      return await res.json();
+    }catch(e){
+      return [];
+    }
+  }
+  async function insertComment(suggestionId, author, comment){
+    const res = await sb('comments', {
+      method:'POST',
+      headers:{ 'Prefer':'return=representation' },
+      body: JSON.stringify({ suggestion_id: suggestionId, author: author || null, comment })
+    });
+    const rows = await res.json();
+    return rows[0];
+  }
+  async function deleteComment(id){
+    return sb(`comments?id=eq.${id}`, { method:'DELETE' });
+  }
+  function groupCommentsBySuggestion(comments){
+    const map = {};
+    comments.forEach(c=>{
+      if(!map[c.suggestion_id]) map[c.suggestion_id] = [];
+      map[c.suggestion_id].push(c);
+    });
+    return map;
+  }
 
   // ---------- tabs ----------
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -529,8 +563,8 @@
       const tab = btn.dataset.tab;
       panels[tab].style.display='block';
       if(tab==='roster') renderRosterTab();
-      if(tab==='board') renderBoardTab();
-      if(tab==='ideas') renderIdeasTab();
+      if(tab==='board'){ renderBoardTab(); markSeen('lastSeenBoard'); document.getElementById('boardRibbon').style.display='none'; }
+      if(tab==='ideas'){ renderIdeasTab(); markSeen('lastSeenIdeas'); document.getElementById('ideasRibbon').style.display='none'; }
       if(tab==='organizer') renderOrganizerTab();
     });
   });
@@ -563,32 +597,29 @@
   }
   updateScoreStat();
 
-  // ---------- latest update banner ----------
-  async function renderLatestUpdateBanner(){
-    const card = document.getElementById('latestUpdateCard');
+  // ---------- new-content ribbons ----------
+  function getLastSeen(key){
+    return localStorage.getItem(key);
+  }
+  function markSeen(key){
+    localStorage.setItem(key, new Date().toISOString());
+  }
+  async function updateRibbons(){
     try{
-      const msgs = await getMessages(); // already sorted desc by created_at
-      if(!msgs.length){ card.style.display='none'; return; }
-      const latest = msgs[0];
-      card.style.display='block';
-      card.innerHTML = `
-        <div class="eyebrow">📣 Latest update</div>
-        <div class="board-msg-header">
-          <span class="board-msg-author">${escapeHtml(latest.author)}</span>
-          <span class="board-msg-time">${formatMsgTime(latest.created_at)}</span>
-        </div>
-        <div class="board-msg-text">${escapeHtml(latest.message)}</div>
-        <div class="update-banner-actions">
-          <button class="btn btn-ghost" id="viewBoardFromBanner" style="padding:6px 12px;font-size:12px;">View board →</button>
-        </div>`;
-      document.getElementById('viewBoardFromBanner').addEventListener('click', ()=>{
-        document.querySelector('[data-tab="board"]').click();
-      });
+      const [msgs, ideas] = await Promise.all([getMessages(), getSuggestions()]);
+      const latestMsg = msgs[0];
+      const latestIdea = ideas[0];
+      const boardSeen = getLastSeen('lastSeenBoard');
+      const ideasSeen = getLastSeen('lastSeenIdeas');
+      document.getElementById('boardRibbon').style.display =
+        (latestMsg && (!boardSeen || new Date(latestMsg.created_at) > new Date(boardSeen))) ? 'inline-block' : 'none';
+      document.getElementById('ideasRibbon').style.display =
+        (latestIdea && (!ideasSeen || new Date(latestIdea.created_at) > new Date(ideasSeen))) ? 'inline-block' : 'none';
     }catch(e){
-      card.style.display='none';
+      // leave ribbons as-is
     }
   }
-  renderLatestUpdateBanner();
+  updateRibbons();
 
   // ---------- submit ----------
   document.getElementById('submitBtn').addEventListener('click', async ()=>{
@@ -629,7 +660,7 @@
       // success panel
       document.querySelector('#tab-join .card').innerHTML = `
         <div class="success-panel">
-          <div class="jersey-big">#${entry.jerseyNumber}</div>
+          <div class="jersey-big">#${roster.length}</div>
           <div class="display" style="font-size:24px;">You're on the roster, ${escapeHtml(name)}!</div>
           <p style="color:var(--ink-soft);font-size:13.5px;max-width:400px;margin:10px auto 20px;">
             ${visibility==='public' ? "Your info is visible to the group on the Roster tab." : "Your details are private — only the organizer can see them."}
@@ -665,7 +696,8 @@
     listEl.innerHTML = '<div class="spinner-row">Loading roster…</div>';
     const arr = await getRoster();
     roster = arr;
-    const sorted = [...arr].sort((a,b)=>a.jerseyNumber-b.jerseyNumber);
+    const sorted = [...arr].sort((a,b)=>new Date(a.submittedAt)-new Date(b.submittedAt));
+    sorted.forEach((p,i)=>{ p.displayNumber = i+1; });
     const pubCount = arr.filter(p=>p.visibility==='public').length;
     countEl.textContent = `${arr.length} signed up · ${pubCount} public`;
 
@@ -682,7 +714,7 @@
       const tags = isPrivate ? [] : tagList(p);
       return `
         <div class="player-card ${isPrivate?'private':''}">
-          <div class="jersey">${p.jerseyNumber}</div>
+          <div class="jersey">${p.displayNumber}</div>
           <div style="flex:1;">
             <div class="player-name">${escapeHtml(p.name)}</div>
             <div class="player-contact">${contactLine}</div>
@@ -736,8 +768,9 @@
       await insertMessage(author, message);
       document.getElementById('b-message').value = '';
       msgEl.innerHTML = '<div class="msg msg-success">Posted!</div>';
+      markSeen('lastSeenBoard');
       await renderBoardTab();
-      await renderLatestUpdateBanner();
+      await updateRibbons();
     }catch(e){
       msgEl.innerHTML = '<div class="msg msg-error">Something went wrong posting your message. Please try again.</div>';
     }finally{
@@ -751,7 +784,8 @@
     const listEl = document.getElementById('ideaList');
     const countEl = document.getElementById('ideaCount');
     listEl.innerHTML = '<div class="spinner-row">Loading suggestions…</div>';
-    const ideas = await getSuggestions();
+    const [ideas, comments] = await Promise.all([getSuggestions(), getComments()]);
+    const commentsBySuggestion = groupCommentsBySuggestion(comments);
     countEl.textContent = `${ideas.length} suggestion${ideas.length===1?'':'s'}`;
 
     if(ideas.length===0){
@@ -759,7 +793,15 @@
       return;
     }
 
-    listEl.innerHTML = ideas.map(s=>`
+    listEl.innerHTML = ideas.map(s=>{
+      const suggestionComments = commentsBySuggestion[s.id] || [];
+      const commentRows = suggestionComments.map(c=>`
+        <div class="comment">
+          <span class="comment-author">${escapeHtml(c.author || 'Anonymous')}</span>
+          <span class="comment-time">${formatMsgTime(c.created_at)}</span>
+          <div class="comment-text">${escapeHtml(c.comment)}</div>
+        </div>`).join('');
+      return `
       <div class="board-msg">
         <div class="board-msg-header">
           <span class="board-msg-author">${escapeHtml(s.author || 'Anonymous')}</span>
@@ -767,7 +809,36 @@
         </div>
         <div class="tag-row" style="margin-bottom:8px;"><span class="tag">${escapeHtml(s.category)}</span></div>
         <div class="board-msg-text">${escapeHtml(s.suggestion)}</div>
-      </div>`).join('');
+        ${commentRows ? `<div class="comment-list">${commentRows}</div>` : ''}
+        <div class="reply-row">
+          <input type="text" class="reply-name" placeholder="Name" data-reply-name="${s.id}">
+          <input type="text" class="reply-text" placeholder="Add a comment…" data-reply-text="${s.id}">
+          <button class="btn btn-ghost" data-reply-btn="${s.id}">Reply</button>
+        </div>
+        <div data-reply-msg="${s.id}"></div>
+      </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('[data-reply-btn]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const sid = btn.dataset.replyBtn;
+        const nameInput = listEl.querySelector(`[data-reply-name="${sid}"]`);
+        const textInput = listEl.querySelector(`[data-reply-text="${sid}"]`);
+        const msgEl = listEl.querySelector(`[data-reply-msg="${sid}"]`);
+        const text = textInput.value.trim();
+        if(!text){ msgEl.innerHTML = '<div class="msg msg-error">Write a comment first.</div>'; return; }
+        btn.disabled = true;
+        btn.textContent = 'Posting…';
+        try{
+          await insertComment(sid, nameInput.value.trim(), text);
+          await renderIdeasTab();
+        }catch(e){
+          msgEl.innerHTML = '<div class="msg msg-error">Something went wrong. Please try again.</div>';
+          btn.disabled = false;
+          btn.textContent = 'Reply';
+        }
+      });
+    });
   }
   document.getElementById('refreshIdeasBtn').addEventListener('click', renderIdeasTab);
 
@@ -788,6 +859,7 @@
       await insertSuggestion(author, category, text);
       document.getElementById('s-text').value = '';
       msgEl.innerHTML = '<div class="msg msg-success">Thanks — sent!</div>';
+      markSeen('lastSeenIdeas');
       await renderIdeasTab();
     }catch(e){
       msgEl.innerHTML = '<div class="msg msg-error">Something went wrong sending your suggestion. Please try again.</div>';
@@ -903,9 +975,12 @@
     gate.innerHTML = '<div class="spinner-row">Loading full roster…</div>';
     const arr = await getRoster();
     roster = arr;
-    const sorted = [...arr].sort((a,b)=>a.jerseyNumber-b.jerseyNumber);
+    const sorted = [...arr].sort((a,b)=>new Date(a.submittedAt)-new Date(b.submittedAt));
+    sorted.forEach((p,i)=>{ p.displayNumber = i+1; });
     const msgs = await getMessages();
     const ideas = await getSuggestions();
+    const comments = await getComments();
+    const commentsBySuggestion = groupCommentsBySuggestion(comments);
     const emailCount = sorted.filter(p=>p.email).length;
 
     const rows = sorted.map(p=>{
@@ -913,7 +988,7 @@
       const tags = tagList(p);
       return `
         <div class="player-card">
-          <div class="jersey">${p.jerseyNumber}</div>
+          <div class="jersey">${p.displayNumber}</div>
           <div style="flex:1;">
             <div class="player-name">${escapeHtml(p.name)} ${p.visibility==='private' ? '<span class="tag lock">private</span>' : ''}</div>
             <div class="player-contact">${contactLine}</div>
@@ -934,7 +1009,16 @@
         <div class="organizer-actions"><button class="btn btn-danger" data-remove-msg="${m.id}">Delete</button></div>
       </div>`).join('') || `<div class="empty-state"><div class="display">No messages</div></div>`;
 
-    const ideaRows = ideas.map(s=>`
+    const ideaRows = ideas.map(s=>{
+      const suggestionComments = commentsBySuggestion[s.id] || [];
+      const commentRows = suggestionComments.map(c=>`
+        <div class="comment">
+          <span class="comment-author">${escapeHtml(c.author || 'Anonymous')}</span>
+          <span class="comment-time">${formatMsgTime(c.created_at)}</span>
+          <div class="comment-text">${escapeHtml(c.comment)}</div>
+          <div class="organizer-actions"><button class="btn btn-danger" data-remove-comment="${c.id}" style="padding:4px 8px;font-size:11px;">Delete</button></div>
+        </div>`).join('');
+      return `
       <div class="board-msg">
         <div class="board-msg-header">
           <span class="board-msg-author">${escapeHtml(s.author || 'Anonymous')}</span>
@@ -943,7 +1027,9 @@
         <div class="tag-row" style="margin-bottom:8px;"><span class="tag">${escapeHtml(s.category)}</span></div>
         <div class="board-msg-text">${escapeHtml(s.suggestion)}</div>
         <div class="organizer-actions"><button class="btn btn-danger" data-remove-idea="${s.id}">Delete</button></div>
-      </div>`).join('') || `<div class="empty-state"><div class="display">No suggestions</div></div>`;
+        ${commentRows ? `<div class="comment-list">${commentRows}</div>` : ''}
+      </div>`;
+    }).join('') || `<div class="empty-state"><div class="display">No suggestions</div></div>`;
 
     gate.innerHTML = `
       <div class="eyebrow" style="display:flex;justify-content:space-between;align-items:center;margin-top:0;">
@@ -1034,7 +1120,8 @@
         const contact = (await getOrganizerContact()) || {};
         const boardText = subject ? `📣 ${subject}\n\n${body}` : body;
         await insertMessage(contact.name || 'Organizer', boardText);
-        await renderLatestUpdateBanner();
+        markSeen('lastSeenBoard');
+        await updateRibbons();
 
         if(emailEnabled()){
           const selectedIds = Array.from(document.querySelectorAll('#updateRecipients input[type=checkbox]:checked')).map(i=>i.value);
@@ -1120,6 +1207,13 @@
       btn.addEventListener('click', async ()=>{
         btn.disabled = true; btn.textContent='Removing…';
         await deleteSuggestion(btn.dataset.removeIdea);
+        renderOrganizerFull();
+      });
+    });
+    gate.querySelectorAll('[data-remove-comment]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true; btn.textContent='Removing…';
+        await deleteComment(btn.dataset.removeComment);
         renderOrganizerFull();
       });
     });
