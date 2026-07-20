@@ -298,8 +298,9 @@
       </label>
       <div class="grid2" id="voteSlots"></div>
       <div id="voteMsg"></div>
-      <div style="margin-top:20px;">
+      <div style="margin-top:20px;display:flex;gap:10px;">
         <button class="btn btn-primary btn-block" id="voteSubmitBtn">Submit my availability</button>
+        <button class="btn btn-ghost" id="voteClearBtn" style="flex-shrink:0;">Clear my vote</button>
       </div>
     </div>
     <div class="refresh-row" style="margin-top:20px;">
@@ -972,6 +973,34 @@
     }
   });
 
+  document.getElementById('voteClearBtn').addEventListener('click', async ()=>{
+    const msgEl = document.getElementById('voteMsg');
+    msgEl.innerHTML = '';
+    const name = document.getElementById('v-name').value.trim();
+    if(!name){
+      msgEl.innerHTML = '<div class="msg msg-error">Enter your name first so we know whose vote to clear.</div>';
+      return;
+    }
+    const btn = document.getElementById('voteClearBtn');
+    btn.disabled = true;
+    btn.textContent = 'Clearing…';
+    try{
+      await replaceVotes(name, [], currentSlots.map(s=>s.key));
+      msgEl.innerHTML = '<div class="msg msg-success">Your vote has been cleared.</div>';
+      document.querySelectorAll('#voteSlots .check-item').forEach(item=>{
+        item.querySelector('input').checked = false;
+        item.classList.remove('checked');
+      });
+      await renderVoteTab();
+      await updateRibbons();
+    }catch(e){
+      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong clearing your vote. Please try again.</div>';
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Clear my vote';
+    }
+  });
+
   // ---------- board tab ----------
   async function renderBoardTab(){
     const listEl = document.getElementById('boardList');
@@ -1276,6 +1305,28 @@
       </div>`;
     }).join('') || `<div class="empty-state"><div class="display">No suggestions</div></div>`;
 
+    const votes = await getVotes();
+    const slotLabelByKey = {};
+    currentSlots.forEach(s=>{ slotLabelByKey[s.key] = `${s.dayLabel.split(',')[0]} ${s.label}`; });
+    const votesByName = {};
+    votes.filter(v=> currentSlots.some(s=>s.key===v.slot)).forEach(v=>{
+      const key = v.name.trim();
+      if(!votesByName[key]) votesByName[key] = [];
+      votesByName[key].push(v.slot);
+    });
+    const voteRows = Object.keys(votesByName).map(name=>{
+      const slots = votesByName[name];
+      return `
+        <div class="board-msg">
+          <div class="board-msg-header">
+            <span class="board-msg-author">${escapeHtml(name)}</span>
+            <span class="pill-count">${slots.length} slot${slots.length===1?'':'s'}</span>
+          </div>
+          <div class="tag-row">${slots.map(sk=>`<span class="tag">${escapeHtml(slotLabelByKey[sk] || sk)}</span>`).join('')}</div>
+          <div class="organizer-actions"><button class="btn btn-danger" data-remove-vote="${escapeHtml(name)}">Delete</button></div>
+        </div>`;
+    }).join('') || `<div class="empty-state"><div class="display">No votes yet</div></div>`;
+
     gate.innerHTML = `
       <div class="eyebrow" style="display:flex;justify-content:space-between;align-items:center;margin-top:0;">
         <span>Full roster (${sorted.length})</span>
@@ -1325,7 +1376,9 @@
       <div class="eyebrow">Board messages (${msgs.length})</div>
       ${msgRows}
       <div class="eyebrow">Suggestions (${ideas.length})</div>
-      ${ideaRows}`;
+      ${ideaRows}
+      <div class="eyebrow">Votes (${Object.keys(votesByName).length})</div>
+      ${voteRows}`;
 
     function updateRecipientCountLabel(){
       const boxes = document.querySelectorAll('#updateRecipients input[type=checkbox]');
@@ -1491,6 +1544,13 @@
       btn.addEventListener('click', async ()=>{
         btn.disabled = true; btn.textContent='Removing…';
         await deleteComment(btn.dataset.removeComment);
+        renderOrganizerFull();
+      });
+    });
+    gate.querySelectorAll('[data-remove-vote]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true; btn.textContent='Removing…';
+        await replaceVotes(btn.dataset.removeVote, [], currentSlots.map(s=>s.key));
         renderOrganizerFull();
       });
     });
