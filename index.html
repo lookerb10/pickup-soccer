@@ -298,9 +298,8 @@
       </label>
       <div class="grid2" id="voteSlots"></div>
       <div id="voteMsg"></div>
-      <div style="margin-top:20px;display:flex;gap:10px;">
+      <div style="margin-top:20px;">
         <button class="btn btn-primary btn-block" id="voteSubmitBtn">Submit my availability</button>
-        <button class="btn btn-ghost" id="voteClearBtn" style="flex-shrink:0;">Clear my vote</button>
       </div>
     </div>
     <div class="refresh-row" style="margin-top:20px;">
@@ -970,34 +969,6 @@
     }finally{
       btn.disabled = false;
       btn.textContent = 'Submit my availability';
-    }
-  });
-
-  document.getElementById('voteClearBtn').addEventListener('click', async ()=>{
-    const msgEl = document.getElementById('voteMsg');
-    msgEl.innerHTML = '';
-    const name = document.getElementById('v-name').value.trim();
-    if(!name){
-      msgEl.innerHTML = '<div class="msg msg-error">Enter your name first so we know whose vote to clear.</div>';
-      return;
-    }
-    const btn = document.getElementById('voteClearBtn');
-    btn.disabled = true;
-    btn.textContent = 'Clearing…';
-    try{
-      await replaceVotes(name, [], currentSlots.map(s=>s.key));
-      msgEl.innerHTML = '<div class="msg msg-success">Your vote has been cleared.</div>';
-      document.querySelectorAll('#voteSlots .check-item').forEach(item=>{
-        item.querySelector('input').checked = false;
-        item.classList.remove('checked');
-      });
-      await renderVoteTab();
-      await updateRibbons();
-    }catch(e){
-      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong clearing your vote. Please try again.</div>';
-    }finally{
-      btn.disabled = false;
-      btn.textContent = 'Clear my vote';
     }
   });
 
