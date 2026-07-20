@@ -145,6 +145,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="join">Join</button>
       <button class="tab-btn" data-tab="roster">Roster</button>
+      <button class="tab-btn" data-tab="vote">Vote<span class="tab-ribbon" id="voteRibbon" style="display:none;">New</span></button>
       <button class="tab-btn" data-tab="board">Board<span class="tab-ribbon" id="boardRibbon" style="display:none;">New</span></button>
       <button class="tab-btn" data-tab="ideas">Ideas<span class="tab-ribbon" id="ideasRibbon" style="display:none;">New</span></button>
       <button class="tab-btn" data-tab="organizer">Organizer</button>
@@ -282,6 +283,32 @@
     <div id="rosterList"></div>
   </section>
 
+  <!-- VOTE TAB -->
+  <section id="tab-vote" style="display:none;">
+    <div id="voteClosedBanner" style="display:none;" class="card">
+      <div class="eyebrow" style="margin-top:0;">Voting is closed</div>
+      <p style="font-size:13.5px;color:var(--ink-soft);">All the time slots for this get-together have passed. Check the results below, or ask the organizer to set new poll dates for next time.</p>
+    </div>
+    <div class="card" id="voteFormCard">
+      <div class="eyebrow" style="margin-top:0;">When's our get-together?</div>
+      <p style="font-size:13.5px;color:var(--ink-soft);margin-top:-8px;margin-bottom:18px;">Check every day &amp; time block that works for you — no need to pick just one. We'll go with whatever slot gets the most votes. Slots close automatically once their time has passed.</p>
+      <label class="field">
+        <span class="lbl">Name *</span>
+        <input type="text" id="v-name" placeholder="Your name">
+      </label>
+      <div class="grid2" id="voteSlots"></div>
+      <div id="voteMsg"></div>
+      <div style="margin-top:20px;">
+        <button class="btn btn-primary btn-block" id="voteSubmitBtn">Submit my availability</button>
+      </div>
+    </div>
+    <div class="refresh-row" style="margin-top:20px;">
+      <span class="pill-count" id="voteCount"></span>
+      <button class="btn btn-ghost" id="refreshVoteBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
+    </div>
+    <div id="voteResults"></div>
+  </section>
+
   <!-- BOARD TAB -->
   <section id="tab-board" style="display:none;">
     <div class="card">
@@ -354,6 +381,54 @@
     'wd-morning':'Weekday AM','wd-afternoon':'Weekday PM','wd-evening':'Weekday eve',
     'we-morning':'Weekend AM','we-afternoon':'Weekend PM','we-evening':'Weekend eve'
   };
+
+  const POLL_TIME_RANGES = [
+    {startHour:8, endHour:10, label:'8 – 10am'},
+    {startHour:10, endHour:12, label:'10am – 12pm'},
+    {startHour:12, endHour:14, label:'12 – 2pm'},
+    {startHour:14, endHour:16, label:'2 – 4pm'},
+    {startHour:16, endHour:18, label:'4 – 6pm'},
+    {startHour:18, endHour:20, label:'6 – 8pm'},
+  ];
+  const POLL_DAY_KEYS = ['saturday','sunday'];
+
+  function toISODate(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function defaultPollDates(){
+    const now = new Date();
+    const diffToSat = (6 - now.getDay() + 7) % 7;
+    const sat = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToSat);
+    const sun = new Date(sat.getFullYear(), sat.getMonth(), sat.getDate() + 1);
+    return { saturday: toISODate(sat), sunday: toISODate(sun) };
+  }
+  function formatDateLabel(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString(undefined, {weekday:'long', month:'short', day:'numeric'});
+  }
+  function buildPollSlots(dates){
+    return POLL_DAY_KEYS.flatMap(dayKey=>{
+      const dateStr = dates[dayKey];
+      return POLL_TIME_RANGES.map(t=>({
+        key: `${dateStr}_${t.startHour}-${t.endHour}`,
+        day: dayKey,
+        dayLabel: formatDateLabel(dateStr),
+        label: t.label,
+        closesAt: new Date(`${dateStr}T${String(t.endHour).padStart(2,'0')}:00:00`)
+      }));
+    });
+  }
+
+  let pollDates = defaultPollDates();
+  let currentSlots = buildPollSlots(pollDates);
+  async function loadPollDates(){
+    pollDates = (await getPollDates()) || defaultPollDates();
+    currentSlots = buildPollSlots(pollDates);
+    return pollDates;
+  }
 
   let roster = null; // cached array
   let organizerUnlocked = false;
@@ -474,6 +549,22 @@
       body: JSON.stringify({ key:'organizer_pin', value: val })
     });
   }
+  async function getPollDates(){
+    try{
+      const res = await sb('settings?key=eq.poll_dates&select=value');
+      const rows = await res.json();
+      return rows.length ? JSON.parse(rows[0].value) : null;
+    }catch(e){
+      return null;
+    }
+  }
+  async function setPollDates(dates){
+    return sb('settings', {
+      method:'POST',
+      headers:{ 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify({ key:'poll_dates', value: JSON.stringify(dates) })
+    });
+  }
   async function getMessages(){
     try{
       const res = await sb('messages?select=*&order=created_at.desc');
@@ -537,6 +628,26 @@
   async function deleteComment(id){
     return sb(`comments?id=eq.${id}`, { method:'DELETE' });
   }
+  async function getVotes(){
+    try{
+      const res = await sb('poll_votes?select=*&order=created_at.desc');
+      return await res.json();
+    }catch(e){
+      return [];
+    }
+  }
+  async function replaceVotes(name, slots, activeSlotKeys){
+    // only clears/replaces this person's votes within the CURRENT poll's slots, so past polls' history is preserved
+    const keyList = activeSlotKeys.map(k=>`"${k}"`).join(',');
+    await sb(`poll_votes?name=ilike.${encodeURIComponent(name)}&slot=in.(${keyList})`, { method:'DELETE' });
+    if(slots.length){
+      await sb('poll_votes', {
+        method:'POST',
+        headers:{ 'Prefer':'return=representation' },
+        body: JSON.stringify(slots.map(slot=>({ name, slot })))
+      });
+    }
+  }
   function groupCommentsBySuggestion(comments){
     const map = {};
     comments.forEach(c=>{
@@ -551,23 +662,32 @@
   const panels = {
     join: document.getElementById('tab-join'),
     roster: document.getElementById('tab-roster'),
+    vote: document.getElementById('tab-vote'),
     board: document.getElementById('tab-board'),
     ideas: document.getElementById('tab-ideas'),
     organizer: document.getElementById('tab-organizer'),
   };
+  function activateTab(tab){
+    if(!panels[tab]) return;
+    tabBtns.forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+    Object.keys(panels).forEach(k=>panels[k].style.display='none');
+    panels[tab].style.display='block';
+    if(location.hash !== '#'+tab) history.replaceState(null, '', '#'+tab);
+    if(tab==='roster') renderRosterTab();
+    if(tab==='vote'){ renderVoteTab(); markSeen('lastSeenVote'); document.getElementById('voteRibbon').style.display='none'; }
+    if(tab==='board'){ renderBoardTab(); markSeen('lastSeenBoard'); document.getElementById('boardRibbon').style.display='none'; }
+    if(tab==='ideas'){ renderIdeasTab(); markSeen('lastSeenIdeas'); document.getElementById('ideasRibbon').style.display='none'; }
+    if(tab==='organizer') renderOrganizerTab();
+  }
   tabBtns.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      tabBtns.forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      Object.keys(panels).forEach(k=>panels[k].style.display='none');
-      const tab = btn.dataset.tab;
-      panels[tab].style.display='block';
-      if(tab==='roster') renderRosterTab();
-      if(tab==='board'){ renderBoardTab(); markSeen('lastSeenBoard'); document.getElementById('boardRibbon').style.display='none'; }
-      if(tab==='ideas'){ renderIdeasTab(); markSeen('lastSeenIdeas'); document.getElementById('ideasRibbon').style.display='none'; }
-      if(tab==='organizer') renderOrganizerTab();
-    });
+    btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));
   });
+
+  // deep-link support: e.g. a link ending in #vote opens straight to that tab
+  const initialTab = location.hash.replace('#','');
+  if(initialTab && initialTab !== 'join' && panels[initialTab]){
+    activateTab(initialTab);
+  }
 
   // ---------- checkbox / radio visual state ----------
   document.querySelectorAll('#f-availability .check-item').forEach(item=>{
@@ -596,6 +716,7 @@
       : `${arr.length} PLAYER${arr.length===1?'':'S'} SIGNED UP · ${pub} PUBLIC${priv?` · ${priv} PRIVATE`:''}`;
   }
   updateScoreStat();
+  loadPollDates();
 
   // ---------- new-content ribbons ----------
   function getLastSeen(key){
@@ -606,15 +727,19 @@
   }
   async function updateRibbons(){
     try{
-      const [msgs, ideas] = await Promise.all([getMessages(), getSuggestions()]);
+      const [msgs, ideas, votes] = await Promise.all([getMessages(), getSuggestions(), getVotes()]);
       const latestMsg = msgs[0];
       const latestIdea = ideas[0];
+      const latestVote = votes[0];
       const boardSeen = getLastSeen('lastSeenBoard');
       const ideasSeen = getLastSeen('lastSeenIdeas');
+      const voteSeen = getLastSeen('lastSeenVote');
       document.getElementById('boardRibbon').style.display =
         (latestMsg && (!boardSeen || new Date(latestMsg.created_at) > new Date(boardSeen))) ? 'inline-block' : 'none';
       document.getElementById('ideasRibbon').style.display =
         (latestIdea && (!ideasSeen || new Date(latestIdea.created_at) > new Date(ideasSeen))) ? 'inline-block' : 'none';
+      document.getElementById('voteRibbon').style.display =
+        (latestVote && (!voteSeen || new Date(latestVote.created_at) > new Date(voteSeen))) ? 'inline-block' : 'none';
     }catch(e){
       // leave ribbons as-is
     }
@@ -727,6 +852,125 @@
     }).join('');
   }
   document.getElementById('refreshRosterBtn').addEventListener('click', renderRosterTab);
+
+  // ---------- vote tab ----------
+  function renderVoteForm(){
+    const container = document.getElementById('voteSlots');
+    const now = new Date();
+    container.innerHTML = POLL_DAY_KEYS.map(dayKey=>{
+      const slots = currentSlots.filter(s=>s.day===dayKey);
+      return `
+        <div>
+          <div class="lbl" style="margin-bottom:8px;">${slots[0].dayLabel}</div>
+          <div class="check-grid" style="grid-template-columns:1fr;">
+            ${slots.map(s=>{
+              const closed = s.closesAt < now;
+              return `<label class="check-item${closed?' closed':''}" data-slot="${s.key}" ${closed?'style="opacity:0.5;cursor:not-allowed;"':''}>
+                <input type="checkbox" ${closed?'disabled':''}>${s.label}${closed?' <span class="tag lock" style="margin-left:4px;">closed</span>':''}
+              </label>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }).join('');
+    container.querySelectorAll('.check-item:not(.closed)').forEach(item=>{
+      const input = item.querySelector('input');
+      input.addEventListener('change', ()=> item.classList.toggle('checked', input.checked));
+    });
+
+    const allClosed = currentSlots.every(s=> s.closesAt < now);
+    document.getElementById('voteFormCard').style.display = allClosed ? 'none' : 'block';
+    document.getElementById('voteClosedBanner').style.display = allClosed ? 'block' : 'none';
+  }
+
+  document.getElementById('v-name').addEventListener('blur', async ()=>{
+    const name = document.getElementById('v-name').value.trim();
+    if(!name) return;
+    const votes = await getVotes();
+    const mySlots = votes.filter(v=>v.name.toLowerCase()===name.toLowerCase()).map(v=>v.slot);
+    if(!mySlots.length) return;
+    document.querySelectorAll('#voteSlots .check-item:not(.closed)').forEach(item=>{
+      const input = item.querySelector('input');
+      const checked = mySlots.includes(item.dataset.slot);
+      input.checked = checked;
+      item.classList.toggle('checked', checked);
+    });
+  });
+
+  async function renderVoteTab(){
+    await loadPollDates();
+    renderVoteForm();
+
+    const resultsEl = document.getElementById('voteResults');
+    const countEl = document.getElementById('voteCount');
+    resultsEl.innerHTML = '<div class="spinner-row">Loading votes…</div>';
+    const votes = await getVotes();
+    const voterCount = new Set(votes.filter(v=> currentSlots.some(s=>s.key===v.slot)).map(v=>v.name.toLowerCase())).size;
+    countEl.textContent = `${voterCount} ${voterCount===1?'person has':'people have'} voted`;
+
+    const counts = {};
+    currentSlots.forEach(s=>{ counts[s.key] = 0; });
+    votes.forEach(v=>{ if(counts[v.slot]!==undefined) counts[v.slot]++; });
+    const max = Math.max(1, ...Object.values(counts));
+
+    if(voterCount===0){
+      resultsEl.innerHTML = `<div class="empty-state"><div class="display">No votes yet</div><p>Be the first to share your availability above.</p></div>`;
+      return;
+    }
+
+    resultsEl.innerHTML = `<div class="card"><div class="eyebrow" style="margin-top:0;">Results</div>` +
+      POLL_DAY_KEYS.map(dayKey=>{
+        const slots = currentSlots.filter(s=>s.day===dayKey);
+        return `
+          <div style="margin-bottom:16px;">
+            <div class="lbl" style="margin-bottom:8px;">${slots[0].dayLabel}</div>
+            ${slots.map(s=>{
+              const c = counts[s.key];
+              const pct = Math.round((c/max)*100);
+              const isTop = c>0 && c===max;
+              return `
+                <div style="margin-bottom:9px;">
+                  <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px;">
+                    <span>${s.label}${isTop?' 🏆':''}</span>
+                    <span class="mono" style="color:var(--ink-soft);">${c} vote${c===1?'':'s'}</span>
+                  </div>
+                  <div style="background:var(--line);border-radius:6px;height:8px;overflow:hidden;">
+                    <div style="width:${pct}%;height:100%;background:${isTop?'var(--cone)':'var(--turf)'};border-radius:6px;"></div>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>`;
+      }).join('') + `</div>`;
+  }
+  document.getElementById('refreshVoteBtn').addEventListener('click', renderVoteTab);
+
+  document.getElementById('voteSubmitBtn').addEventListener('click', async ()=>{
+    const msgEl = document.getElementById('voteMsg');
+    msgEl.innerHTML = '';
+    const name = document.getElementById('v-name').value.trim();
+    const selected = Array.from(document.querySelectorAll('#voteSlots input:checked'))
+      .map(i=>i.closest('.check-item').dataset.slot);
+
+    if(!name || selected.length===0){
+      msgEl.innerHTML = '<div class="msg msg-error">Enter your name and check at least one time that works.</div>';
+      return;
+    }
+
+    const btn = document.getElementById('voteSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try{
+      await replaceVotes(name, selected, currentSlots.map(s=>s.key));
+      msgEl.innerHTML = '<div class="msg msg-success">Thanks — your availability is saved!</div>';
+      markSeen('lastSeenVote');
+      await renderVoteTab();
+      await updateRibbons();
+    }catch(e){
+      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong saving your vote. Please try again.</div>';
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Submit my availability';
+    }
+  });
 
   // ---------- board tab ----------
   async function renderBoardTab(){
@@ -973,6 +1217,7 @@
   async function renderOrganizerFull(){
     const gate = document.getElementById('organizerGate');
     gate.innerHTML = '<div class="spinner-row">Loading full roster…</div>';
+    await loadPollDates();
     const arr = await getRoster();
     roster = arr;
     const sorted = [...arr].sort((a,b)=>new Date(a.submittedAt)-new Date(b.submittedAt));
@@ -1039,6 +1284,15 @@
           <button class="btn btn-ghost" id="lockBtn" style="padding:6px 12px;font-size:12px;">Lock</button>
         </div>
       </div>
+
+      <div class="eyebrow">Poll dates (Vote tab)</div>
+      <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:12px;">People vote on these Saturday &amp; Sunday dates. Each time block closes automatically once it passes — update these whenever you're setting up the next get-together.</p>
+      <div class="grid2">
+        <label class="field"><span class="lbl">Saturday</span><input type="date" id="pollDateSat" value="${pollDates.saturday}"></label>
+        <label class="field"><span class="lbl">Sunday</span><input type="date" id="pollDateSun" value="${pollDates.sunday}"></label>
+      </div>
+      <div id="pollDatesMsg"></div>
+      <button class="btn btn-ghost" id="savePollDatesBtn" style="margin-bottom:8px;">Save poll dates</button>
 
       <div class="eyebrow">Send an update</div>
       <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:12px;">Posts to the Board (everyone sees it there) and emails whoever you select below.</p>
@@ -1147,6 +1401,29 @@
       }finally{
         btn.disabled = false;
         btn.textContent = emailEnabled() ? `Post & email ${recipientCount} player${recipientCount===1?'':'s'}` : 'Post update';
+      }
+    });
+
+    document.getElementById('savePollDatesBtn').addEventListener('click', async ()=>{
+      const msgEl = document.getElementById('pollDatesMsg');
+      const sat = document.getElementById('pollDateSat').value;
+      const sun = document.getElementById('pollDateSun').value;
+      if(!sat || !sun){
+        msgEl.innerHTML = '<div class="msg msg-error">Pick both dates.</div>';
+        return;
+      }
+      const btn = document.getElementById('savePollDatesBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try{
+        await setPollDates({ saturday: sat, sunday: sun });
+        await loadPollDates();
+        msgEl.innerHTML = '<div class="msg msg-success">Saved — the Vote tab now uses these dates.</div>';
+      }catch(e){
+        msgEl.innerHTML = '<div class="msg msg-error">Could not save. Try again.</div>';
+      }finally{
+        btn.disabled = false;
+        btn.textContent = 'Save poll dates';
       }
     });
 
