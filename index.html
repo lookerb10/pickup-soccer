@@ -158,7 +158,13 @@
 
   <!-- JOIN TAB -->
   <section id="tab-join">
-    <div class="card">
+    <div class="card" style="background:var(--pitch);box-shadow:none;">
+      <div class="display" style="font-size:27px;color:var(--chalk);margin-bottom:10px;">Everyone's welcome on the pitch</div>
+      <p style="font-size:14.5px;line-height:1.65;color:rgba(241,244,236,0.85);margin:0;">
+        This is just a group of people who want to get together and play friendly soccer matches — no tryouts, no drama. All ages, genders, races, and skill levels are welcome, whether you've played competitively for years or you're brand new to the game. Fill out the form below to get on the roster, and we'll figure out the rest together.
+      </p>
+    </div>
+    <div class="card" id="joinFormCard">
       <div class="eyebrow">Basics</div>
       <label class="field">
         <span class="lbl">Name *</span>
@@ -285,28 +291,39 @@
 
   <!-- VOTE TAB -->
   <section id="tab-vote" style="display:none;">
-    <div id="voteClosedBanner" style="display:none;" class="card">
-      <div class="eyebrow" style="margin-top:0;">Voting is closed</div>
-      <p style="font-size:13.5px;color:var(--ink-soft);">All the time slots for this get-together have passed. Check the results below, or ask the organizer to set new poll dates for next time.</p>
-    </div>
-    <div class="card" id="voteFormCard">
-      <div class="eyebrow" style="margin-top:0;">When's our get-together?</div>
-      <p style="font-size:13.5px;color:var(--ink-soft);margin-top:-8px;margin-bottom:18px;">Check every day &amp; time block that works for you — no need to pick just one. We'll go with whatever slot gets the most votes. Slots close automatically once their time has passed.</p>
+    <div class="card">
+      <div class="eyebrow" style="margin-top:0;">Propose a match</div>
+      <p style="font-size:13.5px;color:var(--ink-soft);margin-top:-8px;margin-bottom:18px;">Anyone can propose a day to play — everyone else votes on which time blocks work, and it closes automatically once the day passes.</p>
       <label class="field">
-        <span class="lbl">Name *</span>
-        <input type="text" id="v-name" placeholder="Your name">
+        <span class="lbl">Your name *</span>
+        <input type="text" id="m-name" placeholder="Your name">
       </label>
-      <div class="grid2" id="voteSlots"></div>
-      <div id="voteMsg"></div>
-      <div style="margin-top:20px;">
-        <button class="btn btn-primary btn-block" id="voteSubmitBtn">Submit my availability</button>
+      <div class="grid2">
+        <label class="field">
+          <span class="lbl">Date *</span>
+          <input type="date" id="m-date">
+        </label>
+        <label class="field">
+          <span class="lbl">Where / details</span>
+          <input type="text" id="m-note" placeholder="Optional — field, park, etc.">
+        </label>
+      </div>
+      <div id="proposeMsg"></div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-primary btn-block" id="proposeMatchBtn">Propose this match</button>
       </div>
     </div>
+
     <div class="refresh-row" style="margin-top:20px;">
-      <span class="pill-count" id="voteCount"></span>
-      <button class="btn btn-ghost" id="refreshVoteBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
+      <span class="pill-count" id="matchCount"></span>
+      <button class="btn btn-ghost" id="refreshMatchesBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
     </div>
-    <div id="voteResults"></div>
+    <div id="upcomingMatches"></div>
+
+    <div id="pastMatchesWrap" style="display:none;">
+      <div class="eyebrow" style="margin-top:26px;">Past matches</div>
+      <div id="pastMatches"></div>
+    </div>
   </section>
 
   <!-- BOARD TAB -->
@@ -383,14 +400,13 @@
   };
 
   const POLL_TIME_RANGES = [
-    {startHour:8, endHour:10, label:'8 – 10am'},
-    {startHour:10, endHour:12, label:'10am – 12pm'},
-    {startHour:12, endHour:14, label:'12 – 2pm'},
-    {startHour:14, endHour:16, label:'2 – 4pm'},
-    {startHour:16, endHour:18, label:'4 – 6pm'},
-    {startHour:18, endHour:20, label:'6 – 8pm'},
+    {key:'8-10', startHour:8, endHour:10, label:'8 – 10am'},
+    {key:'10-12', startHour:10, endHour:12, label:'10am – 12pm'},
+    {key:'12-14', startHour:12, endHour:14, label:'12 – 2pm'},
+    {key:'14-16', startHour:14, endHour:16, label:'2 – 4pm'},
+    {key:'16-18', startHour:16, endHour:18, label:'4 – 6pm'},
+    {key:'18-20', startHour:18, endHour:20, label:'6 – 8pm'},
   ];
-  const POLL_DAY_KEYS = ['saturday','sunday'];
 
   function toISODate(d){
     const y = d.getFullYear();
@@ -398,36 +414,20 @@
     const day = String(d.getDate()).padStart(2,'0');
     return `${y}-${m}-${day}`;
   }
-  function defaultPollDates(){
-    const now = new Date();
-    const diffToSat = (6 - now.getDay() + 7) % 7;
-    const sat = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToSat);
-    const sun = new Date(sat.getFullYear(), sat.getMonth(), sat.getDate() + 1);
-    return { saturday: toISODate(sat), sunday: toISODate(sun) };
-  }
   function formatDateLabel(dateStr){
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString(undefined, {weekday:'long', month:'short', day:'numeric'});
   }
-  function buildPollSlots(dates){
-    return POLL_DAY_KEYS.flatMap(dayKey=>{
-      const dateStr = dates[dayKey];
-      return POLL_TIME_RANGES.map(t=>({
-        key: `${dateStr}_${t.startHour}-${t.endHour}`,
-        day: dayKey,
-        dayLabel: formatDateLabel(dateStr),
-        label: t.label,
-        closesAt: new Date(`${dateStr}T${String(t.endHour).padStart(2,'0')}:00:00`)
-      }));
-    });
+  function matchSlots(matchDate){
+    return POLL_TIME_RANGES.map(t=>({
+      key: t.key,
+      label: t.label,
+      closesAt: new Date(`${matchDate}T${String(t.endHour).padStart(2,'0')}:00:00`)
+    }));
   }
-
-  let pollDates = defaultPollDates();
-  let currentSlots = buildPollSlots(pollDates);
-  async function loadPollDates(){
-    pollDates = (await getPollDates()) || defaultPollDates();
-    currentSlots = buildPollSlots(pollDates);
-    return pollDates;
+  function isMatchClosed(matchDate){
+    const now = new Date();
+    return matchSlots(matchDate).every(s=> s.closesAt < now);
   }
 
   let roster = null; // cached array
@@ -549,21 +549,26 @@
       body: JSON.stringify({ key:'organizer_pin', value: val })
     });
   }
-  async function getPollDates(){
+  async function getMatches(){
     try{
-      const res = await sb('settings?key=eq.poll_dates&select=value');
-      const rows = await res.json();
-      return rows.length ? JSON.parse(rows[0].value) : null;
+      const res = await sb('matches?select=*&order=match_date.asc');
+      return await res.json();
     }catch(e){
-      return null;
+      return [];
     }
   }
-  async function setPollDates(dates){
-    return sb('settings', {
+  async function insertMatch(creatorName, matchDate, note){
+    const res = await sb('matches', {
       method:'POST',
-      headers:{ 'Prefer':'resolution=merge-duplicates' },
-      body: JSON.stringify({ key:'poll_dates', value: JSON.stringify(dates) })
+      headers:{ 'Prefer':'return=representation' },
+      body: JSON.stringify({ creator_name: creatorName, match_date: matchDate, note: note || null })
     });
+    const rows = await res.json();
+    return rows[0];
+  }
+  async function deleteMatch(id){
+    await sb(`poll_votes?match_id=eq.${id}`, { method:'DELETE' });
+    return sb(`matches?id=eq.${id}`, { method:'DELETE' });
   }
   async function getMessages(){
     try{
@@ -628,7 +633,7 @@
   async function deleteComment(id){
     return sb(`comments?id=eq.${id}`, { method:'DELETE' });
   }
-  async function getVotes(){
+  async function getAllVotes(){
     try{
       const res = await sb('poll_votes?select=*&order=created_at.desc');
       return await res.json();
@@ -636,15 +641,21 @@
       return [];
     }
   }
-  async function replaceVotes(name, slots, activeSlotKeys){
-    // only clears/replaces this person's votes within the CURRENT poll's slots, so past polls' history is preserved
-    const keyList = activeSlotKeys.map(k=>`"${k}"`).join(',');
-    await sb(`poll_votes?name=ilike.${encodeURIComponent(name)}&slot=in.(${keyList})`, { method:'DELETE' });
+  async function getVotesForMatch(matchId){
+    try{
+      const res = await sb(`poll_votes?match_id=eq.${matchId}&select=*`);
+      return await res.json();
+    }catch(e){
+      return [];
+    }
+  }
+  async function replaceMatchVotes(matchId, name, slots){
+    await sb(`poll_votes?match_id=eq.${matchId}&name=ilike.${encodeURIComponent(name)}`, { method:'DELETE' });
     if(slots.length){
       await sb('poll_votes', {
         method:'POST',
         headers:{ 'Prefer':'return=representation' },
-        body: JSON.stringify(slots.map(slot=>({ name, slot })))
+        body: JSON.stringify(slots.map(slot=>({ match_id: matchId, name, slot })))
       });
     }
   }
@@ -716,7 +727,6 @@
       : `${arr.length} PLAYER${arr.length===1?'':'S'} SIGNED UP · ${pub} PUBLIC${priv?` · ${priv} PRIVATE`:''}`;
   }
   updateScoreStat();
-  loadPollDates();
 
   // ---------- new-content ribbons ----------
   function getLastSeen(key){
@@ -727,10 +737,10 @@
   }
   async function updateRibbons(){
     try{
-      const [msgs, ideas, votes] = await Promise.all([getMessages(), getSuggestions(), getVotes()]);
+      const [msgs, ideas, votes, matches] = await Promise.all([getMessages(), getSuggestions(), getAllVotes(), getMatches()]);
       const latestMsg = msgs[0];
       const latestIdea = ideas[0];
-      const latestVote = votes[0];
+      const latestActivity = [...votes, ...matches].sort((a,b)=> new Date(b.created_at)-new Date(a.created_at))[0];
       const boardSeen = getLastSeen('lastSeenBoard');
       const ideasSeen = getLastSeen('lastSeenIdeas');
       const voteSeen = getLastSeen('lastSeenVote');
@@ -739,7 +749,7 @@
       document.getElementById('ideasRibbon').style.display =
         (latestIdea && (!ideasSeen || new Date(latestIdea.created_at) > new Date(ideasSeen))) ? 'inline-block' : 'none';
       document.getElementById('voteRibbon').style.display =
-        (latestVote && (!voteSeen || new Date(latestVote.created_at) > new Date(voteSeen))) ? 'inline-block' : 'none';
+        (latestActivity && (!voteSeen || new Date(latestActivity.created_at) > new Date(voteSeen))) ? 'inline-block' : 'none';
     }catch(e){
       // leave ribbons as-is
     }
@@ -783,7 +793,7 @@
       await updateScoreStat();
 
       // success panel
-      document.querySelector('#tab-join .card').innerHTML = `
+      document.getElementById('joinFormCard').innerHTML = `
         <div class="success-panel">
           <div class="jersey-big">#${roster.length}</div>
           <div class="display" style="font-size:24px;">You're on the roster, ${escapeHtml(name)}!</div>
@@ -853,42 +863,111 @@
   }
   document.getElementById('refreshRosterBtn').addEventListener('click', renderRosterTab);
 
-  // ---------- vote tab ----------
-  function renderVoteForm(){
-    const container = document.getElementById('voteSlots');
+  // ---------- vote tab (multiple proposed matches) ----------
+  document.getElementById('m-date').min = toISODate(new Date());
+
+  function renderMatchCard(match, votes, interactive){
+    const slots = matchSlots(match.match_date);
     const now = new Date();
-    container.innerHTML = POLL_DAY_KEYS.map(dayKey=>{
-      const slots = currentSlots.filter(s=>s.day===dayKey);
+    const counts = {};
+    slots.forEach(s=>{ counts[s.key] = 0; });
+    votes.forEach(v=>{ if(counts[v.slot]!==undefined) counts[v.slot]++; });
+    const max = Math.max(1, ...Object.values(counts));
+    const voterCount = new Set(votes.map(v=>v.name.toLowerCase())).size;
+
+    const resultsHtml = slots.map(s=>{
+      const c = counts[s.key];
+      const pct = Math.round((c/max)*100);
+      const isTop = c>0 && c===max;
       return `
-        <div>
-          <div class="lbl" style="margin-bottom:8px;">${slots[0].dayLabel}</div>
-          <div class="check-grid" style="grid-template-columns:1fr;">
-            ${slots.map(s=>{
-              const closed = s.closesAt < now;
-              return `<label class="check-item${closed?' closed':''}" data-slot="${s.key}" ${closed?'style="opacity:0.5;cursor:not-allowed;"':''}>
-                <input type="checkbox" ${closed?'disabled':''}>${s.label}${closed?' <span class="tag lock" style="margin-left:4px;">closed</span>':''}
-              </label>`;
-            }).join('')}
+        <div style="margin-bottom:9px;">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px;">
+            <span>${s.label}${isTop?' 🏆':''}</span>
+            <span class="mono" style="color:var(--ink-soft);">${c} vote${c===1?'':'s'}</span>
+          </div>
+          <div style="background:var(--line);border-radius:6px;height:8px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${isTop?'var(--cone)':'var(--turf)'};border-radius:6px;"></div>
           </div>
         </div>`;
     }).join('');
-    container.querySelectorAll('.check-item:not(.closed)').forEach(item=>{
-      const input = item.querySelector('input');
-      input.addEventListener('change', ()=> item.classList.toggle('checked', input.checked));
-    });
 
-    const allClosed = currentSlots.every(s=> s.closesAt < now);
-    document.getElementById('voteFormCard').style.display = allClosed ? 'none' : 'block';
-    document.getElementById('voteClosedBanner').style.display = allClosed ? 'block' : 'none';
+    const formHtml = interactive ? `
+      <label class="field" style="margin-top:14px;margin-bottom:10px;">
+        <span class="lbl">Your name *</span>
+        <input type="text" class="match-vote-name" placeholder="Your name">
+      </label>
+      <div class="check-grid">
+        ${slots.map(s=>{
+          const closed = s.closesAt < now;
+          return `<label class="check-item${closed?' closed':''}" data-slot="${s.key}" ${closed?'style="opacity:0.5;cursor:not-allowed;"':''}>
+            <input type="checkbox" ${closed?'disabled':''}>${s.label}${closed?' <span class="tag lock" style="margin-left:4px;">closed</span>':''}
+          </label>`;
+        }).join('')}
+      </div>
+      <div class="match-vote-msg"></div>
+      <div style="margin-top:14px;">
+        <button class="btn btn-primary btn-block match-vote-submit">Submit my availability</button>
+      </div>
+    ` : '';
+
+    return `
+      <div class="card" data-match-id="${match.id}" style="margin-bottom:16px;">
+        <div class="eyebrow" style="margin-top:0;display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
+          <span>${escapeHtml(formatDateLabel(match.match_date))}</span>
+          <span class="pill-count">${voterCount} voted</span>
+        </div>
+        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">Proposed by ${escapeHtml(match.creator_name)}${match.note ? ` · ${escapeHtml(match.note)}` : ''}</div>
+        ${resultsHtml}
+        ${formHtml}
+      </div>`;
   }
 
-  document.getElementById('v-name').addEventListener('blur', async ()=>{
-    const name = document.getElementById('v-name').value.trim();
+  async function renderVoteTab(){
+    const countEl = document.getElementById('matchCount');
+    const upcomingEl = document.getElementById('upcomingMatches');
+    const pastWrapEl = document.getElementById('pastMatchesWrap');
+    const pastEl = document.getElementById('pastMatches');
+    upcomingEl.innerHTML = '<div class="spinner-row">Loading matches…</div>';
+
+    const [matches, votes] = await Promise.all([getMatches(), getAllVotes()]);
+    const votesByMatch = {};
+    votes.forEach(v=>{
+      if(!votesByMatch[v.match_id]) votesByMatch[v.match_id] = [];
+      votesByMatch[v.match_id].push(v);
+    });
+
+    const upcoming = matches.filter(m=> !isMatchClosed(m.match_date)).sort((a,b)=> new Date(a.match_date)-new Date(b.match_date));
+    const past = matches.filter(m=> isMatchClosed(m.match_date)).sort((a,b)=> new Date(b.match_date)-new Date(a.match_date));
+
+    countEl.textContent = `${upcoming.length} open match${upcoming.length===1?'':'es'}`;
+    upcomingEl.innerHTML = upcoming.length
+      ? upcoming.map(m=> renderMatchCard(m, votesByMatch[m.id]||[], true)).join('')
+      : `<div class="empty-state"><div class="display">No matches proposed yet</div><p>Propose one above to get people voting.</p></div>`;
+
+    if(past.length){
+      pastWrapEl.style.display = 'block';
+      pastEl.innerHTML = past.map(m=> renderMatchCard(m, votesByMatch[m.id]||[], false)).join('');
+    }else{
+      pastWrapEl.style.display = 'none';
+      pastEl.innerHTML = '';
+    }
+  }
+  document.getElementById('refreshMatchesBtn').addEventListener('click', renderVoteTab);
+
+  document.getElementById('upcomingMatches').addEventListener('change', (e)=>{
+    const item = e.target.closest('.check-item');
+    if(item) item.classList.toggle('checked', e.target.checked);
+  });
+
+  document.getElementById('upcomingMatches').addEventListener('focusout', async (e)=>{
+    if(!e.target.classList.contains('match-vote-name')) return;
+    const card = e.target.closest('[data-match-id]');
+    const name = e.target.value.trim();
     if(!name) return;
-    const votes = await getVotes();
+    const votes = await getVotesForMatch(card.dataset.matchId);
     const mySlots = votes.filter(v=>v.name.toLowerCase()===name.toLowerCase()).map(v=>v.slot);
     if(!mySlots.length) return;
-    document.querySelectorAll('#voteSlots .check-item:not(.closed)').forEach(item=>{
+    card.querySelectorAll('.check-item:not(.closed)').forEach(item=>{
       const input = item.querySelector('input');
       const checked = mySlots.includes(item.dataset.slot);
       input.checked = checked;
@@ -896,79 +975,65 @@
     });
   });
 
-  async function renderVoteTab(){
-    await loadPollDates();
-    renderVoteForm();
-
-    const resultsEl = document.getElementById('voteResults');
-    const countEl = document.getElementById('voteCount');
-    resultsEl.innerHTML = '<div class="spinner-row">Loading votes…</div>';
-    const votes = await getVotes();
-    const voterCount = new Set(votes.filter(v=> currentSlots.some(s=>s.key===v.slot)).map(v=>v.name.toLowerCase())).size;
-    countEl.textContent = `${voterCount} ${voterCount===1?'person has':'people have'} voted`;
-
-    const counts = {};
-    currentSlots.forEach(s=>{ counts[s.key] = 0; });
-    votes.forEach(v=>{ if(counts[v.slot]!==undefined) counts[v.slot]++; });
-    const max = Math.max(1, ...Object.values(counts));
-
-    if(voterCount===0){
-      resultsEl.innerHTML = `<div class="empty-state"><div class="display">No votes yet</div><p>Be the first to share your availability above.</p></div>`;
-      return;
-    }
-
-    resultsEl.innerHTML = `<div class="card"><div class="eyebrow" style="margin-top:0;">Results</div>` +
-      POLL_DAY_KEYS.map(dayKey=>{
-        const slots = currentSlots.filter(s=>s.day===dayKey);
-        return `
-          <div style="margin-bottom:16px;">
-            <div class="lbl" style="margin-bottom:8px;">${slots[0].dayLabel}</div>
-            ${slots.map(s=>{
-              const c = counts[s.key];
-              const pct = Math.round((c/max)*100);
-              const isTop = c>0 && c===max;
-              return `
-                <div style="margin-bottom:9px;">
-                  <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px;">
-                    <span>${s.label}${isTop?' 🏆':''}</span>
-                    <span class="mono" style="color:var(--ink-soft);">${c} vote${c===1?'':'s'}</span>
-                  </div>
-                  <div style="background:var(--line);border-radius:6px;height:8px;overflow:hidden;">
-                    <div style="width:${pct}%;height:100%;background:${isTop?'var(--cone)':'var(--turf)'};border-radius:6px;"></div>
-                  </div>
-                </div>`;
-            }).join('')}
-          </div>`;
-      }).join('') + `</div>`;
-  }
-  document.getElementById('refreshVoteBtn').addEventListener('click', renderVoteTab);
-
-  document.getElementById('voteSubmitBtn').addEventListener('click', async ()=>{
-    const msgEl = document.getElementById('voteMsg');
-    msgEl.innerHTML = '';
-    const name = document.getElementById('v-name').value.trim();
-    const selected = Array.from(document.querySelectorAll('#voteSlots input:checked'))
+  document.getElementById('upcomingMatches').addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.match-vote-submit');
+    if(!btn) return;
+    const card = btn.closest('[data-match-id]');
+    const matchId = card.dataset.matchId;
+    const nameInput = card.querySelector('.match-vote-name');
+    const msgEl = card.querySelector('.match-vote-msg');
+    const name = nameInput.value.trim();
+    const selected = Array.from(card.querySelectorAll('input[type=checkbox]:checked'))
       .map(i=>i.closest('.check-item').dataset.slot);
+    msgEl.innerHTML = '';
 
     if(!name || selected.length===0){
       msgEl.innerHTML = '<div class="msg msg-error">Enter your name and check at least one time that works.</div>';
       return;
     }
 
-    const btn = document.getElementById('voteSubmitBtn');
     btn.disabled = true;
     btn.textContent = 'Saving…';
     try{
-      await replaceVotes(name, selected, currentSlots.map(s=>s.key));
-      msgEl.innerHTML = '<div class="msg msg-success">Thanks — your availability is saved!</div>';
+      await replaceMatchVotes(matchId, name, selected);
+      markSeen('lastSeenVote');
+      await renderVoteTab();
+      await updateRibbons();
+    }catch(err){
+      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong saving your vote. Please try again.</div>';
+      btn.disabled = false;
+      btn.textContent = 'Submit my availability';
+    }
+  });
+
+  document.getElementById('proposeMatchBtn').addEventListener('click', async ()=>{
+    const msgEl = document.getElementById('proposeMsg');
+    msgEl.innerHTML = '';
+    const name = document.getElementById('m-name').value.trim();
+    const date = document.getElementById('m-date').value;
+    const note = document.getElementById('m-note').value.trim();
+
+    if(!name || !date){
+      msgEl.innerHTML = '<div class="msg msg-error">Enter your name and pick a date.</div>';
+      return;
+    }
+
+    const btn = document.getElementById('proposeMatchBtn');
+    btn.disabled = true;
+    btn.textContent = 'Proposing…';
+    try{
+      await insertMatch(name, date, note);
+      document.getElementById('m-date').value = '';
+      document.getElementById('m-note').value = '';
+      msgEl.innerHTML = '<div class="msg msg-success">Match proposed — people can vote on it below!</div>';
       markSeen('lastSeenVote');
       await renderVoteTab();
       await updateRibbons();
     }catch(e){
-      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong saving your vote. Please try again.</div>';
+      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong proposing this match. Please try again.</div>';
     }finally{
       btn.disabled = false;
-      btn.textContent = 'Submit my availability';
+      btn.textContent = 'Propose this match';
     }
   });
 
@@ -1217,7 +1282,6 @@
   async function renderOrganizerFull(){
     const gate = document.getElementById('organizerGate');
     gate.innerHTML = '<div class="spinner-row">Loading full roster…</div>';
-    await loadPollDates();
     const arr = await getRoster();
     roster = arr;
     const sorted = [...arr].sort((a,b)=>new Date(a.submittedAt)-new Date(b.submittedAt));
@@ -1276,27 +1340,47 @@
       </div>`;
     }).join('') || `<div class="empty-state"><div class="display">No suggestions</div></div>`;
 
-    const votes = await getVotes();
-    const slotLabelByKey = {};
-    currentSlots.forEach(s=>{ slotLabelByKey[s.key] = `${s.dayLabel.split(',')[0]} ${s.label}`; });
-    const votesByName = {};
-    votes.filter(v=> currentSlots.some(s=>s.key===v.slot)).forEach(v=>{
-      const key = v.name.trim();
-      if(!votesByName[key]) votesByName[key] = [];
-      votesByName[key].push(v.slot);
+    const matches = await getMatches();
+    const allVotes = await getAllVotes();
+    const votesByMatch = {};
+    allVotes.forEach(v=>{
+      if(!votesByMatch[v.match_id]) votesByMatch[v.match_id] = [];
+      votesByMatch[v.match_id].push(v);
     });
-    const voteRows = Object.keys(votesByName).map(name=>{
-      const slots = votesByName[name];
+    const slotLabelByKey = {};
+    POLL_TIME_RANGES.forEach(t=>{ slotLabelByKey[t.key] = t.label; });
+
+    const matchRows = matches.map(m=>{
+      const mVotes = votesByMatch[m.id] || [];
+      const votersByName = {};
+      mVotes.forEach(v=>{
+        const key = v.name.trim();
+        if(!votersByName[key]) votersByName[key] = [];
+        votersByName[key].push(v.slot);
+      });
+      const voterRows = Object.keys(votersByName).map(name=>{
+        const slots = votersByName[name];
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:13px;">${escapeHtml(name)}</div>
+              <div class="tag-row">${slots.map(sk=>`<span class="tag">${escapeHtml(slotLabelByKey[sk] || sk)}</span>`).join('')}</div>
+            </div>
+            <button class="btn btn-danger" data-remove-voter-match="${m.id}" data-remove-voter-name="${escapeHtml(name)}" style="padding:4px 8px;font-size:11px;flex-shrink:0;">Delete</button>
+          </div>`;
+      }).join('') || `<div class="notes" style="margin-top:8px;">No votes yet</div>`;
+
       return `
         <div class="board-msg">
           <div class="board-msg-header">
-            <span class="board-msg-author">${escapeHtml(name)}</span>
-            <span class="pill-count">${slots.length} slot${slots.length===1?'':'s'}</span>
+            <span class="board-msg-author">${escapeHtml(formatDateLabel(m.match_date))}</span>
+            <span class="board-msg-time">${isMatchClosed(m.match_date) ? 'closed' : 'open'}</span>
           </div>
-          <div class="tag-row">${slots.map(sk=>`<span class="tag">${escapeHtml(slotLabelByKey[sk] || sk)}</span>`).join('')}</div>
-          <div class="organizer-actions"><button class="btn btn-danger" data-remove-vote="${escapeHtml(name)}">Delete</button></div>
+          <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Proposed by ${escapeHtml(m.creator_name)}${m.note ? ` · ${escapeHtml(m.note)}` : ''}</div>
+          ${voterRows}
+          <div class="organizer-actions"><button class="btn btn-danger" data-remove-match="${m.id}">Delete match</button></div>
         </div>`;
-    }).join('') || `<div class="empty-state"><div class="display">No votes yet</div></div>`;
+    }).join('') || `<div class="empty-state"><div class="display">No matches proposed yet</div></div>`;
 
     gate.innerHTML = `
       <div class="eyebrow" style="display:flex;justify-content:space-between;align-items:center;margin-top:0;">
@@ -1306,15 +1390,6 @@
           <button class="btn btn-ghost" id="lockBtn" style="padding:6px 12px;font-size:12px;">Lock</button>
         </div>
       </div>
-
-      <div class="eyebrow">Poll dates (Vote tab)</div>
-      <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:12px;">People vote on these Saturday &amp; Sunday dates. Each time block closes automatically once it passes — update these whenever you're setting up the next get-together.</p>
-      <div class="grid2">
-        <label class="field"><span class="lbl">Saturday</span><input type="date" id="pollDateSat" value="${pollDates.saturday}"></label>
-        <label class="field"><span class="lbl">Sunday</span><input type="date" id="pollDateSun" value="${pollDates.sunday}"></label>
-      </div>
-      <div id="pollDatesMsg"></div>
-      <button class="btn btn-ghost" id="savePollDatesBtn" style="margin-bottom:8px;">Save poll dates</button>
 
       <div class="eyebrow">Send an update</div>
       <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:12px;">Posts to the Board (everyone sees it there) and emails whoever you select below.</p>
@@ -1348,8 +1423,8 @@
       ${msgRows}
       <div class="eyebrow">Suggestions (${ideas.length})</div>
       ${ideaRows}
-      <div class="eyebrow">Votes (${Object.keys(votesByName).length})</div>
-      ${voteRows}`;
+      <div class="eyebrow">Matches (${matches.length})</div>
+      ${matchRows}`;
 
     function updateRecipientCountLabel(){
       const boxes = document.querySelectorAll('#updateRecipients input[type=checkbox]');
@@ -1428,29 +1503,6 @@
       }
     });
 
-    document.getElementById('savePollDatesBtn').addEventListener('click', async ()=>{
-      const msgEl = document.getElementById('pollDatesMsg');
-      const sat = document.getElementById('pollDateSat').value;
-      const sun = document.getElementById('pollDateSun').value;
-      if(!sat || !sun){
-        msgEl.innerHTML = '<div class="msg msg-error">Pick both dates.</div>';
-        return;
-      }
-      const btn = document.getElementById('savePollDatesBtn');
-      btn.disabled = true;
-      btn.textContent = 'Saving…';
-      try{
-        await setPollDates({ saturday: sat, sunday: sun });
-        await loadPollDates();
-        msgEl.innerHTML = '<div class="msg msg-success">Saved — the Vote tab now uses these dates.</div>';
-      }catch(e){
-        msgEl.innerHTML = '<div class="msg msg-error">Could not save. Try again.</div>';
-      }finally{
-        btn.disabled = false;
-        btn.textContent = 'Save poll dates';
-      }
-    });
-
     document.getElementById('editContactBtn').addEventListener('click', async ()=>{
       const contact = (await getOrganizerContact()) || {};
       const formHtml = `
@@ -1518,10 +1570,17 @@
         renderOrganizerFull();
       });
     });
-    gate.querySelectorAll('[data-remove-vote]').forEach(btn=>{
+    gate.querySelectorAll('[data-remove-voter-match]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         btn.disabled = true; btn.textContent='Removing…';
-        await replaceVotes(btn.dataset.removeVote, [], currentSlots.map(s=>s.key));
+        await replaceMatchVotes(btn.dataset.removeVoterMatch, btn.dataset.removeVoterName, []);
+        renderOrganizerFull();
+      });
+    });
+    gate.querySelectorAll('[data-remove-match]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true; btn.textContent='Removing…';
+        await deleteMatch(btn.dataset.removeMatch);
         renderOrganizerFull();
       });
     });
