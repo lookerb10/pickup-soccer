@@ -13,6 +13,16 @@
     {key:'18-20', startHour:18, endHour:20, label:'6 – 8pm'},
   ];
 
+  const GAME_HEADCOUNT = 6;
+  function matchStatusBadge(match, voterCount){
+    const wantsGame = match.wants_game !== false;
+    const wantsPractice = match.wants_practice !== false;
+    if(wantsGame && voterCount >= GAME_HEADCOUNT) return '🆚 Game';
+    if(wantsGame && !wantsPractice) return `⏳ Needs ${GAME_HEADCOUNT - voterCount} more for a game`;
+    if(wantsPractice) return wantsGame ? `⚽ Practice (${GAME_HEADCOUNT - voterCount} more for a game)` : '⚽ Practice';
+    return '';
+  }
+
   function toISODate(d){
     const y = d.getFullYear();
     const m = String(d.getMonth()+1).padStart(2,'0');
@@ -162,11 +172,14 @@
       return [];
     }
   }
-  async function insertMatch(creatorName, matchDate, note){
+  async function insertMatch(creatorName, matchDate, note, wantsGame, wantsPractice){
     const res = await sb('matches', {
       method:'POST',
       headers:{ 'Prefer':'return=representation' },
-      body: JSON.stringify({ creator_name: creatorName, match_date: matchDate, note: note || null })
+      body: JSON.stringify({
+        creator_name: creatorName, match_date: matchDate, note: note || null,
+        wants_game: wantsGame, wants_practice: wantsPractice
+      })
     });
     const rows = await res.json();
     return rows[0];
@@ -307,6 +320,12 @@
 
   // ---------- checkbox / radio visual state ----------
   document.querySelectorAll('#f-availability .check-item').forEach(item=>{
+    const input = item.querySelector('input');
+    input.addEventListener('change', ()=>{
+      item.classList.toggle('checked', input.checked);
+    });
+  });
+  document.querySelectorAll('#m-type .check-item').forEach(item=>{
     const input = item.querySelector('input');
     input.addEventListener('change', ()=>{
       item.classList.toggle('checked', input.checked);
@@ -568,7 +587,7 @@
       <div class="card" data-match-id="${match.id}" style="margin-bottom:16px;">
         <div class="eyebrow" style="margin-top:0;display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
           <span>${escapeHtml(formatDateLabel(match.match_date))}</span>
-          <span class="pill-count">${voterCount} voted</span>
+          <span class="pill-count">${voterCount} voted · ${matchStatusBadge(match, voterCount)}</span>
         </div>
         <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">Proposed by ${escapeHtml(match.creator_name)}${match.note ? ` · ${escapeHtml(match.note)}` : ''}</div>
         ${resultsHtml}
@@ -680,9 +699,15 @@
     const name = document.getElementById('m-name').value.trim();
     const date = document.getElementById('m-date').value;
     const note = document.getElementById('m-note').value.trim();
+    const wantsGame = document.querySelector('#m-type [data-type="game"] input').checked;
+    const wantsPractice = document.querySelector('#m-type [data-type="practice"] input').checked;
 
     if(!name || !date){
       msgEl.innerHTML = '<div class="msg msg-error">Enter your name and pick a date.</div>';
+      return;
+    }
+    if(!wantsGame && !wantsPractice){
+      msgEl.innerHTML = '<div class="msg msg-error">Pick game, practice, or both.</div>';
       return;
     }
 
@@ -690,7 +715,7 @@
     btn.disabled = true;
     btn.textContent = 'Proposing…';
     try{
-      await insertMatch(name, date, note);
+      await insertMatch(name, date, note, wantsGame, wantsPractice);
       document.getElementById('m-date').value = '';
       document.getElementById('m-note').value = '';
       msgEl.innerHTML = '<div class="msg msg-success">Match proposed — people can vote on it below!</div>';
@@ -1044,7 +1069,7 @@
         <div class="board-msg">
           <div class="board-msg-header">
             <span class="board-msg-author">${escapeHtml(formatDateLabel(m.match_date))}</span>
-            <span class="board-msg-time">${isMatchClosed(m.match_date) ? 'closed' : 'open'}</span>
+            <span class="board-msg-time">${isMatchClosed(m.match_date) ? 'closed' : 'open'} · ${matchStatusBadge(m, Object.keys(votersByName).length)}</span>
           </div>
           <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Proposed by ${escapeHtml(m.creator_name)}${m.note ? ` · ${escapeHtml(m.note)}` : ''}</div>
           ${voterRows}
