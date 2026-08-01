@@ -18,7 +18,8 @@
     </div>
     <div class="stat-line" id="scoreStat">Loading roster…</div>
     <div class="tabs">
-      <button class="tab-btn active" data-tab="join">Join</button>
+      <button class="tab-btn active" data-tab="home">Home</button>
+      <button class="tab-btn" data-tab="join">Join</button>
       <button class="tab-btn" data-tab="roster">Roster</button>
       <button class="tab-btn" data-tab="vote">Vote<span class="tab-ribbon" id="voteRibbon" style="display:none;">New</span></button>
       <button class="tab-btn" data-tab="board">Board<span class="tab-ribbon" id="boardRibbon" style="display:none;">New</span></button>
@@ -31,8 +32,41 @@
 
 <main>
 
+  <!-- HOME TAB -->
+  <section id="tab-home">
+    <div class="card" style="background:var(--pitch);box-shadow:none;">
+      <div class="display" style="font-size:27px;color:var(--chalk);margin-bottom:10px;">Welcome to Pickup Soccer</div>
+      <p style="font-size:14.5px;line-height:1.65;color:rgba(241,244,236,0.85);margin:0 0 16px;">
+        A casual group getting together to play — no tryouts, no drama, all ages and skill levels welcome. We vote on days and times that work, then show up and play. Here's a look at our default field and the gear we've got set up there.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="homeJoinBtn">Join the roster →</button>
+        <button class="btn btn-ghost" id="homeVoteBtn" style="border-color:var(--chalk);color:var(--chalk);">Vote on a match →</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow" style="margin-top:0;">Our default field</div>
+      <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:14px;">We're not locked into one spot — but this field is always open and available, so it's our reliable default until we've got enough people to branch out. And it's stocked with the real thing: full-size goals (not the flimsy pop-up kind), plus rebounder nets, agility ladders, hurdles, agility poles, and cones for warmups.</p>
+      <div class="photo-carousel">
+        <div class="carousel-track" id="fieldCarouselTrack">
+          <img src="images/field-IMG_2352.jpg" alt="Full-size goal set up on the open field" loading="lazy">
+          <img src="images/field-IMG_2346.jpg" alt="Rebounder net with cones and an agility ladder" loading="lazy">
+          <img src="images/field-IMG_2349.jpg" alt="Shooting-target goal with practice cutouts" loading="lazy">
+          <img src="images/field-IMG_2348.jpg" alt="Agility ladders, poles, and rebounder net set up for training" loading="lazy">
+          <img src="images/field-IMG_2350.jpg" alt="Training equipment spread across the field" loading="lazy">
+          <img src="images/field-IMG_2351.jpg" alt="Full field view with goals and balls set out" loading="lazy">
+          <img src="images/field-IMG_2353.jpg" alt="Goal in the foreground with the rest of the field beyond" loading="lazy">
+        </div>
+        <button class="carousel-arrow carousel-prev" id="fieldCarouselPrev" aria-label="Previous photo">‹</button>
+        <button class="carousel-arrow carousel-next" id="fieldCarouselNext" aria-label="Next photo">›</button>
+        <div class="carousel-dots" id="fieldCarouselDots"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- JOIN TAB -->
-  <section id="tab-join">
+  <section id="tab-join" style="display:none;">
     <div class="card" style="background:var(--pitch);box-shadow:none;">
       <div class="display" style="font-size:27px;color:var(--chalk);margin-bottom:10px;">Everyone's welcome on the pitch</div>
       <p style="font-size:14.5px;line-height:1.65;color:rgba(241,244,236,0.85);margin:0;">

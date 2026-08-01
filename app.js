@@ -289,6 +289,7 @@
   // ---------- tabs ----------
   const tabBtns = document.querySelectorAll('.tab-btn');
   const panels = {
+    home: document.getElementById('tab-home'),
     join: document.getElementById('tab-join'),
     roster: document.getElementById('tab-roster'),
     vote: document.getElementById('tab-vote'),
@@ -314,9 +315,52 @@
 
   // deep-link support: e.g. a link ending in #vote opens straight to that tab
   const initialTab = location.hash.replace('#','');
-  if(initialTab && initialTab !== 'join' && panels[initialTab]){
+  if(initialTab && initialTab !== 'home' && panels[initialTab]){
     activateTab(initialTab);
   }
+
+  document.getElementById('homeJoinBtn').addEventListener('click', ()=>{
+    document.querySelector('[data-tab="join"]').click();
+  });
+  document.getElementById('homeVoteBtn').addEventListener('click', ()=>{
+    document.querySelector('[data-tab="vote"]').click();
+  });
+
+  // ---------- field photo carousel ----------
+  (function(){
+    const track = document.getElementById('fieldCarouselTrack');
+    const dotsWrap = document.getElementById('fieldCarouselDots');
+    const prevBtn = document.getElementById('fieldCarouselPrev');
+    const nextBtn = document.getElementById('fieldCarouselNext');
+    const slides = Array.from(track.children);
+    let current = 0;
+
+    slides.forEach((_, i)=>{
+      const dot = document.createElement('button');
+      dot.className = 'carousel-dot' + (i===0 ? ' active' : '');
+      dot.setAttribute('aria-label', `Go to photo ${i+1}`);
+      dot.addEventListener('click', ()=> goTo(i));
+      dotsWrap.appendChild(dot);
+    });
+    const dots = Array.from(dotsWrap.children);
+
+    function goTo(i){
+      current = (i + slides.length) % slides.length;
+      track.scrollTo({ left: current * track.clientWidth, behavior: 'smooth' });
+    }
+    prevBtn.addEventListener('click', ()=> goTo(current - 1));
+    nextBtn.addEventListener('click', ()=> goTo(current + 1));
+
+    let scrollTimer;
+    track.addEventListener('scroll', ()=>{
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(()=>{
+        const idx = Math.round(track.scrollLeft / track.clientWidth);
+        current = Math.max(0, Math.min(slides.length - 1, idx));
+        dots.forEach((d,i)=> d.classList.toggle('active', i===current));
+      }, 100);
+    });
+  })();
 
   // ---------- checkbox / radio visual state ----------
   document.querySelectorAll('#f-availability .check-item').forEach(item=>{
