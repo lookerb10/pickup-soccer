@@ -14,12 +14,12 @@
   ];
 
   const GAME_HEADCOUNT = 6;
-  function matchStatusBadge(match, voterCount){
+  function matchStatusBadge(match, bestSlotCount){
     const wantsGame = match.wants_game !== false;
     const wantsPractice = match.wants_practice !== false;
-    if(wantsGame && voterCount >= GAME_HEADCOUNT) return '🆚 Game';
-    if(wantsGame && !wantsPractice) return `⏳ Needs ${GAME_HEADCOUNT - voterCount} more for a game`;
-    if(wantsPractice) return wantsGame ? `⚽ Practice (${GAME_HEADCOUNT - voterCount} more for a game)` : '⚽ Practice';
+    if(wantsGame && bestSlotCount >= GAME_HEADCOUNT) return '🆚 Game';
+    if(wantsGame && !wantsPractice) return `⏳ Needs ${GAME_HEADCOUNT - bestSlotCount} more (same time slot) for a game`;
+    if(wantsPractice) return wantsGame ? `⚽ Practice (${GAME_HEADCOUNT - bestSlotCount} more in one slot for a game)` : '⚽ Practice';
     return '';
   }
 
@@ -587,7 +587,7 @@
       <div class="card" data-match-id="${match.id}" style="margin-bottom:16px;">
         <div class="eyebrow" style="margin-top:0;display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
           <span>${escapeHtml(formatDateLabel(match.match_date))}</span>
-          <span class="pill-count">${voterCount} voted · ${matchStatusBadge(match, voterCount)}</span>
+          <span class="pill-count">${voterCount} voted · ${matchStatusBadge(match, max)}</span>
         </div>
         <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">Proposed by ${escapeHtml(match.creator_name)}${match.note ? ` · ${escapeHtml(match.note)}` : ''}</div>
         ${resultsHtml}
@@ -1046,12 +1046,15 @@
     const matchRows = matches.map(m=>{
       const mVotes = votesByMatch[m.id] || [];
       const votersByName = {};
+      const slotCounts = {};
       mVotes.forEach(v=>{
         const key = v.name.trim();
         if(!votersByName[key]) votersByName[key] = { slots: [], location: null };
         votersByName[key].slots.push(v.slot);
         if(v.location) votersByName[key].location = v.location;
+        slotCounts[v.slot] = (slotCounts[v.slot]||0) + 1;
       });
+      const bestSlotCount = Object.keys(slotCounts).length ? Math.max(...Object.values(slotCounts)) : 0;
       const voterRows = Object.keys(votersByName).map(name=>{
         const { slots, location } = votersByName[name];
         return `
@@ -1069,7 +1072,7 @@
         <div class="board-msg">
           <div class="board-msg-header">
             <span class="board-msg-author">${escapeHtml(formatDateLabel(m.match_date))}</span>
-            <span class="board-msg-time">${isMatchClosed(m.match_date) ? 'closed' : 'open'} · ${matchStatusBadge(m, Object.keys(votersByName).length)}</span>
+            <span class="board-msg-time">${isMatchClosed(m.match_date) ? 'closed' : 'open'} · ${matchStatusBadge(m, bestSlotCount)}</span>
           </div>
           <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Proposed by ${escapeHtml(m.creator_name)}${m.note ? ` · ${escapeHtml(m.note)}` : ''}</div>
           ${voterRows}
