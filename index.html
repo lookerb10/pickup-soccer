@@ -11,6 +11,13 @@
 </head>
 <body>
 
+<div class="event-banner" id="eventBanner">
+  <div class="event-banner-inner">
+    <span class="event-banner-text"><strong>🎉 Season Kickoff Party</strong> · Sat, Aug 29 @ 8:00 AM · Frank Castello Park</span>
+    <button class="event-banner-cta" id="eventBannerBtn">See details →</button>
+  </div>
+</div>
+
 <div class="scoreboard">
   <div class="scoreboard-inner">
     <div class="title-row">
@@ -19,11 +26,12 @@
     <div class="stat-line" id="scoreStat">Loading roster…</div>
     <div class="tabs">
       <button class="tab-btn active" data-tab="home">Home</button>
+      <button class="tab-btn" data-tab="event">Event</button>
       <button class="tab-btn" data-tab="join">Join</button>
       <button class="tab-btn" data-tab="roster">Roster</button>
-      <button class="tab-btn" data-tab="vote">Vote<span class="tab-ribbon" id="voteRibbon" style="display:none;">New</span></button>
-      <button class="tab-btn" data-tab="board">Board<span class="tab-ribbon" id="boardRibbon" style="display:none;">New</span></button>
-      <button class="tab-btn" data-tab="ideas">Ideas<span class="tab-ribbon" id="ideasRibbon" style="display:none;">New</span></button>
+      <button class="tab-btn" data-tab="vote">Matches</button>
+      <button class="tab-btn" data-tab="board">Board</button>
+      <button class="tab-btn" data-tab="ideas">Ideas</button>
       <button class="tab-btn" data-tab="organizer">Organizer</button>
     </div>
   </div>
@@ -41,7 +49,7 @@
       </p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-primary" id="homeJoinBtn">Join the roster →</button>
-        <button class="btn btn-ghost" id="homeVoteBtn" style="border-color:var(--chalk);color:var(--chalk);">Vote on a match →</button>
+        <button class="btn btn-ghost" id="homeVoteBtn" style="border-color:var(--chalk);color:var(--chalk);">See matches →</button>
       </div>
     </div>
 
@@ -63,6 +71,57 @@
         <div class="carousel-dots" id="fieldCarouselDots"></div>
       </div>
     </div>
+  </section>
+
+  <!-- EVENT TAB -->
+  <section id="tab-event" style="display:none;">
+    <div class="card event-hero">
+      <div class="event-hero-eyebrow">Season Kickoff Party</div>
+      <div class="display event-hero-title">Let's launch this thing right.</div>
+      <p class="event-hero-body">
+        This is the one that kicks it all off — not just a game, a party. The field's fully stocked: full-size goals (not the flimsy pop-up kind), rebounder nets, agility ladders, hurdles, poles, and a bag full of balls. Come kick around, run a few drills, or just meet the group.
+      </p>
+      <p class="event-hero-body">
+        We're bringing chairs and yard games too, so swing by even if you're not sure about playing. All ages, all skill levels, zero pressure — bring a friend.
+      </p>
+      <div class="event-meta-grid">
+        <div class="event-meta"><span class="event-meta-label">Date</span><span class="event-meta-value">Saturday, August 29</span></div>
+        <div class="event-meta"><span class="event-meta-label">Time</span><span class="event-meta-value">8:00 – 10:00 AM</span></div>
+        <div class="event-meta"><span class="event-meta-label">Field</span><span class="event-meta-value">Frank Castello Park</span></div>
+        <div class="event-meta"><span class="event-meta-label">Cost</span><span class="event-meta-value">Free</span></div>
+      </div>
+      <a class="btn btn-ghost event-directions-btn" href="https://maps.app.goo.gl/NyADmUfdBzvxYMow5?g_st=ic" target="_blank" rel="noopener">📍 Get directions →</a>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow" style="margin-top:0;">Are you in?</div>
+      <div class="rsvp-row" id="rsvpRow">
+        <button class="rsvp-btn rsvp-in" data-status="in">🟢 I'm in!</button>
+        <button class="rsvp-btn rsvp-maybe" data-status="maybe">🟡 Maybe</button>
+        <button class="rsvp-btn rsvp-out" data-status="out">🔴 Can't make it</button>
+      </div>
+      <div class="grid2" style="margin-top:14px;">
+        <label class="field" id="rsvpNameField">
+          <span class="lbl">Your name *</span>
+          <input type="text" id="rsvp-name" placeholder="Your name">
+        </label>
+        <label class="field">
+          <span class="lbl">Bringing anyone?</span>
+          <input type="number" id="rsvp-guests" min="0" max="20" value="0" placeholder="0">
+          <span class="hint">Just the headcount — no need to name them.</span>
+        </label>
+      </div>
+      <div id="rsvpMsg"></div>
+      <div style="margin-top:6px;">
+        <button class="btn btn-primary btn-block" id="rsvpSubmitBtn" disabled>Pick a response above</button>
+      </div>
+    </div>
+
+    <div class="refresh-row" style="margin-top:20px;">
+      <span class="pill-count" id="rsvpCount"></span>
+      <button class="btn btn-ghost" id="refreshRsvpBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
+    </div>
+    <div id="rsvpList"></div>
   </section>
 
   <!-- JOIN TAB -->

@@ -285,11 +285,28 @@
     });
     return map;
   }
+  async function getEventRsvps(){
+    try{
+      const res = await sb('event_rsvps?select=*&order=created_at.asc');
+      return await res.json();
+    }catch(e){
+      return [];
+    }
+  }
+  async function setEventRsvp(name, status, guests){
+    await sb(`event_rsvps?name=ilike.${encodeURIComponent(name)}`, { method:'DELETE' });
+    return sb('event_rsvps', {
+      method:'POST',
+      headers:{ 'Prefer':'return=representation' },
+      body: JSON.stringify({ name, status, guests })
+    });
+  }
 
   // ---------- tabs ----------
   const tabBtns = document.querySelectorAll('.tab-btn');
   const panels = {
     home: document.getElementById('tab-home'),
+    event: document.getElementById('tab-event'),
     join: document.getElementById('tab-join'),
     roster: document.getElementById('tab-roster'),
     vote: document.getElementById('tab-vote'),
@@ -304,9 +321,10 @@
     panels[tab].style.display='block';
     if(location.hash !== '#'+tab) history.replaceState(null, '', '#'+tab);
     if(tab==='roster') renderRosterTab();
-    if(tab==='vote'){ renderVoteTab(); markSeen('lastSeenVote'); document.getElementById('voteRibbon').style.display='none'; }
-    if(tab==='board'){ renderBoardTab(); markSeen('lastSeenBoard'); document.getElementById('boardRibbon').style.display='none'; }
-    if(tab==='ideas'){ renderIdeasTab(); markSeen('lastSeenIdeas'); document.getElementById('ideasRibbon').style.display='none'; }
+    if(tab==='vote') renderVoteTab();
+    if(tab==='board') renderBoardTab();
+    if(tab==='ideas') renderIdeasTab();
+    if(tab==='event') renderEventTab();
     if(tab==='organizer') renderOrganizerTab();
   }
   tabBtns.forEach(btn=>{
@@ -324,6 +342,9 @@
   });
   document.getElementById('homeVoteBtn').addEventListener('click', ()=>{
     document.querySelector('[data-tab="vote"]').click();
+  });
+  document.getElementById('eventBannerBtn').addEventListener('click', ()=>{
+    document.querySelector('[data-tab="event"]').click();
   });
 
   // ---------- field photo carousel ----------
@@ -362,6 +383,68 @@
     });
   })();
 
+  // ---------- event tab (RSVP) ----------
+  let selectedRsvpStatus = null;
+  document.querySelectorAll('#rsvpRow .rsvp-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      selectedRsvpStatus = btn.dataset.status;
+      document.querySelectorAll('#rsvpRow .rsvp-btn').forEach(b=> b.classList.toggle('selected', b===btn));
+      const submitBtn = document.getElementById('rsvpSubmitBtn');
+      submitBtn.disabled = false;
+      const labels = { in: "Save — I'm in!", maybe: 'Save — maybe', out: "Save — can't make it" };
+      submitBtn.textContent = labels[selectedRsvpStatus];
+    });
+  });
+
+  document.getElementById('rsvpSubmitBtn').addEventListener('click', async ()=>{
+    const msgEl = document.getElementById('rsvpMsg');
+    msgEl.innerHTML = '';
+    const name = document.getElementById('rsvp-name').value.trim();
+    if(!name){
+      msgEl.innerHTML = '<div class="msg msg-error">Enter your name first.</div>';
+      return;
+    }
+    if(!selectedRsvpStatus){
+      msgEl.innerHTML = '<div class="msg msg-error">Pick In, Maybe, or Can\'t make it above.</div>';
+      return;
+    }
+    const guests = Math.max(0, parseInt(document.getElementById('rsvp-guests').value, 10) || 0);
+    const btn = document.getElementById('rsvpSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try{
+      await setEventRsvp(name, selectedRsvpStatus, guests);
+      msgEl.innerHTML = '<div class="msg msg-success">Got it — see you out there!</div>';
+      await renderEventTab();
+    }catch(e){
+      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong saving your RSVP. Please try again.</div>';
+      btn.disabled = false;
+    }
+  });
+
+  async function renderEventTab(){
+    const listEl = document.getElementById('rsvpList');
+    const countEl = document.getElementById('rsvpCount');
+    listEl.innerHTML = '<div class="spinner-row">Loading RSVPs…</div>';
+    const rsvps = await getEventRsvps();
+    const inList = rsvps.filter(r=>r.status==='in');
+    const maybeList = rsvps.filter(r=>r.status==='maybe');
+    const headcount = (r)=> 1 + (r.guests||0);
+    const totalIn = inList.reduce((sum,r)=> sum + headcount(r), 0);
+    countEl.textContent = `${inList.length} in${totalIn>inList.length ? ` (${totalIn} total)` : ''} · ${maybeList.length} maybe`;
+
+    if(!inList.length && !maybeList.length){
+      listEl.innerHTML = `<div class="empty-state"><div class="display">No responses yet</div><p>Be the first to say you're in.</p></div>`;
+      return;
+    }
+    const chip = (r, statusClass, dot)=> `<span class="rsvp-name-chip ${statusClass}">${dot} ${escapeHtml(r.name)}${r.guests ? ` +${r.guests}` : ''}</span>`;
+    listEl.innerHTML = `
+      ${inList.length ? `<div class="rsvp-group-label">In (${inList.length})</div>${inList.map(r=>chip(r,'','🟢')).join('')}` : ''}
+      ${maybeList.length ? `<div class="rsvp-group-label">Maybe (${maybeList.length})</div>${maybeList.map(r=>chip(r,'maybe','🟡')).join('')}` : ''}
+    `;
+  }
+  document.getElementById('refreshRsvpBtn').addEventListener('click', renderEventTab);
+
   // ---------- checkbox / radio visual state ----------
   document.querySelectorAll('#f-availability .check-item').forEach(item=>{
     const input = item.querySelector('input');
@@ -396,36 +479,11 @@
   }
   updateScoreStat();
 
-  // ---------- new-content ribbons ----------
-  function getLastSeen(key){
-    return localStorage.getItem(key);
-  }
-  function markSeen(key){
-    localStorage.setItem(key, new Date().toISOString());
-  }
-  async function updateRibbons(){
-    try{
-      const [msgs, ideas, votes, matches] = await Promise.all([getMessages(), getSuggestions(), getAllVotes(), getMatches()]);
-      const latestMsg = msgs[0];
-      const latestIdea = ideas[0];
-      const latestActivity = [...votes, ...matches].sort((a,b)=> new Date(b.created_at)-new Date(a.created_at))[0];
-      const boardSeen = getLastSeen('lastSeenBoard');
-      const ideasSeen = getLastSeen('lastSeenIdeas');
-      const voteSeen = getLastSeen('lastSeenVote');
-      document.getElementById('boardRibbon').style.display =
-        (latestMsg && (!boardSeen || new Date(latestMsg.created_at) > new Date(boardSeen))) ? 'inline-block' : 'none';
-      document.getElementById('ideasRibbon').style.display =
-        (latestIdea && (!ideasSeen || new Date(latestIdea.created_at) > new Date(ideasSeen))) ? 'inline-block' : 'none';
-      document.getElementById('voteRibbon').style.display =
-        (latestActivity && (!voteSeen || new Date(latestActivity.created_at) > new Date(voteSeen))) ? 'inline-block' : 'none';
-    }catch(e){
-      // leave ribbons as-is
-    }
-  }
-  updateRibbons();
-
   // ---------- submit ----------
   document.getElementById('submitBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('submitBtn');
+    if(btn.disabled) return;
+
     const msgEl = document.getElementById('joinMsg');
     msgEl.innerHTML = '';
 
@@ -447,17 +505,18 @@
       return;
     }
 
-    const currentRoster = await getRoster();
-    if(currentRoster.some(p=>p.name.trim().toLowerCase() === name.toLowerCase())){
-      msgEl.innerHTML = `<div class="msg msg-error">Someone's already on the roster as "${escapeHtml(name)}". Please use a more specific name (e.g. add a last initial) so we can tell you apart.</div>`;
-      return;
-    }
-
-    const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.textContent = 'Adding you…';
 
     try{
+      const currentRoster = await getRoster();
+      if(currentRoster.some(p=>p.name.trim().toLowerCase() === name.toLowerCase())){
+        msgEl.innerHTML = `<div class="msg msg-error">Someone's already on the roster as "${escapeHtml(name)}". Please use a more specific name (e.g. add a last initial) so we can tell you apart.</div>`;
+        btn.disabled = false;
+        btn.textContent = 'Add me to the roster';
+        return;
+      }
+
       const entry = await insertEntry({
         name, phone, email, frequency, experience, intensity, position, age, notes,
         availability, visibility
@@ -480,7 +539,9 @@
         document.querySelector('[data-tab="roster"]').click();
       });
     }catch(e){
-      msgEl.innerHTML = '<div class="msg msg-error">Something went wrong saving your sign-up. Please try again.</div>';
+      msgEl.innerHTML = /23505/.test(e.message)
+        ? `<div class="msg msg-error">Someone's already on the roster as "${escapeHtml(name)}". Please use a more specific name (e.g. add a last initial) so we can tell you apart.</div>`
+        : '<div class="msg msg-error">Something went wrong saving your sign-up. Please try again.</div>';
       btn.disabled = false;
       btn.textContent = 'Add me to the roster';
     }
@@ -727,9 +788,7 @@
     btn.textContent = 'Saving…';
     try{
       await replaceMatchVotes(matchId, name, selected, location);
-      markSeen('lastSeenVote');
       await renderVoteTab();
-      await updateRibbons();
     }catch(err){
       msgEl.innerHTML = '<div class="msg msg-error">Something went wrong saving your vote. Please try again.</div>';
       btn.disabled = false;
@@ -763,9 +822,7 @@
       document.getElementById('m-date').value = '';
       document.getElementById('m-note').value = '';
       msgEl.innerHTML = '<div class="msg msg-success">Match proposed — people can vote on it below!</div>';
-      markSeen('lastSeenVote');
       await renderVoteTab();
-      await updateRibbons();
     }catch(e){
       msgEl.innerHTML = '<div class="msg msg-error">Something went wrong proposing this match. Please try again.</div>';
     }finally{
@@ -814,9 +871,7 @@
       await insertMessage(author, message);
       document.getElementById('b-message').value = '';
       msgEl.innerHTML = '<div class="msg msg-success">Posted!</div>';
-      markSeen('lastSeenBoard');
       await renderBoardTab();
-      await updateRibbons();
     }catch(e){
       msgEl.innerHTML = '<div class="msg msg-error">Something went wrong posting your message. Please try again.</div>';
     }finally{
@@ -905,7 +960,6 @@
       await insertSuggestion(author, category, text);
       document.getElementById('s-text').value = '';
       msgEl.innerHTML = '<div class="msg msg-success">Thanks — sent!</div>';
-      markSeen('lastSeenIdeas');
       await renderIdeasTab();
     }catch(e){
       msgEl.innerHTML = '<div class="msg msg-error">Something went wrong sending your suggestion. Please try again.</div>';
@@ -1215,8 +1269,6 @@
         const contact = (await getOrganizerContact()) || {};
         const boardText = subject ? `📣 ${subject}\n\n${body}` : body;
         await insertMessage(contact.name || 'Organizer', boardText);
-        markSeen('lastSeenBoard');
-        await updateRibbons();
 
         if(emailEnabled()){
           const selectedIds = Array.from(document.querySelectorAll('#updateRecipients input[type=checkbox]:checked')).map(i=>i.value);

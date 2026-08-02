@@ -6,7 +6,7 @@ A sign-up, roster, and scheduling site for a casual pickup soccer group. Static 
 
 ## How it's structured
 
-- `index.html` — page markup for all tabs (Join, Roster, Vote, Board, Ideas, Organizer)
+- `index.html` — page markup for all tabs (Home, Event, Join, Roster, Vote, Board, Ideas, Organizer)
 - `styles.css` — all styling
 - `app.js` — all behavior: talks to Supabase directly via `fetch()` against its REST API (no client library, no build step)
 
@@ -24,7 +24,8 @@ then open `http://localhost:8000/index.html`. Since it's all client-side and tal
 
 ## Tabs / features
 
-- **Join** — roster sign-up (name, contact info, availability, preferences). No login. Blocks joining under an exact duplicate name (case-insensitive) already on the roster, so e.g. two people can't both be plain "Daniel" — "Daniel" and "Daniel L" are fine as distinct people.
+- **Event** — announcement banner (shown on every tab) and a dedicated page for a one-off featured event, with live "In / Maybe / Can't make it" RSVPs backed by the `event_rsvps` table.
+- **Join** — roster sign-up (name, contact info, availability, preferences). No login. Blocks joining under an exact duplicate name (case-insensitive, whitespace-trimmed) already on the roster, so e.g. two people can't both be plain "Daniel" — "Daniel" and "Daniel L" are fine as distinct people. Enforced both client-side (checked before insert) and at the database level (`entries_name_unique_idx`, a unique index on `lower(trim(name))`), so it holds even under a race (double-click, two open tabs, etc.).
 - **Roster** — public list of everyone who joined (private-visibility entries hide contact details from everyone but the organizer).
 - **Vote** — anyone can propose a match (date + optional location note + whether they're open to a full game, a practice, or either). Others vote on which time blocks work and can add a preferred location. Time slots close automatically once they're in the past. Voting again under the same name replaces your prior vote — you'll get a confirm prompt if that name already has a vote recorded, to catch accidental overwrites. A match is labeled 🎮 Game once 6+ people have voted (3v3 minimum); otherwise it shows as ⚽ Practice, unless the proposer specifically restricted it to one or the other.
 - **Board** — free-form message posting, visible to everyone.
@@ -46,6 +47,7 @@ Current tables:
 | `matches` | Proposed match dates | `creator_name`, `match_date`, `note`, `wants_game`, `wants_practice`, `created_at` |
 | `poll_votes` | Per-match availability votes | `match_id`, `name`, `slot` (e.g. `"8-10"`), `location`, `created_at` |
 | `settings` | Key/value config | `organizer_pin`, `organizer_contact` (JSON string) |
+| `event_rsvps` | RSVPs for the featured Event tab | `name`, `status` (`in`/`maybe`/`out`), `guests` (extra headcount), `created_at` |
 
 All tables currently have permissive Row Level Security policies (open read/write via the anon key) — there's no per-user auth. An earlier iteration explored real Supabase Auth accounts for editing votes but it was reverted in favor of the simpler name-based + confirm-popup approach described above, so there's no login system to reason about.
 
@@ -65,6 +67,7 @@ create table entries (
   visibility text not null default 'public',
   submitted_at timestamptz not null default now()
 );
+create unique index entries_name_unique_idx on entries (lower(trim(name)));
 
 create table messages (
   id uuid primary key default gen_random_uuid(),
@@ -107,6 +110,14 @@ create table poll_votes (
 create table settings (
   key text primary key,
   value text
+);
+
+create table event_rsvps (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  status text not null,
+  guests int not null default 0,
+  created_at timestamptz not null default now()
 );
 
 -- open access via the anon key for every table above, e.g.:
