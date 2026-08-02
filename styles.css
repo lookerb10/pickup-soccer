@@ -12,7 +12,15 @@
     --danger:#C24B4B;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--chalk);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  body{
+    margin:0;color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;
+    background-color:var(--chalk);
+    background-image:linear-gradient(rgba(241,244,236,0.35), rgba(241,244,236,0.35)), url('images/field-IMG_2351.jpg');
+    background-size:cover;
+    background-position:center top;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+  }
   .mono{font-family:'IBM Plex Mono',monospace;}
   .display{font-family:'Bebas Neue',sans-serif;letter-spacing:0.02em;}
 
