@@ -44,9 +44,8 @@
   .rsvp-group-label:first-child{margin-top:0;}
 
   /* Scoreboard header */
-  .scoreboard{background:var(--pitch-dark);color:var(--chalk);padding:28px 20px 0;}
-  .scoreboard-inner{max-width:760px;margin:0 auto;}
-  .scoreboard h1{display:none;} /* replaced by title below */
+  .scoreboard{background:var(--pitch-dark);color:var(--chalk);}
+  .scoreboard-inner{max-width:760px;margin:0 auto;padding:28px 20px 0;}
   .title-row{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;}
   .title{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:0.03em;margin:0;color:var(--chalk);}
   .stat-line{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--turf);text-transform:uppercase;letter-spacing:0.08em;}
@@ -69,7 +68,7 @@
   label.field{display:block;margin-bottom:16px;}
   label.field .lbl{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px;color:var(--ink);}
   label.field .hint{display:block;font-size:12px;color:var(--ink-soft);margin-top:4px;}
-  input[type=text], input[type=tel], input[type=email], select, textarea{
+  input[type=text], input[type=tel], input[type=email], input[type=number], input[type=date], select, textarea{
     width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);background:#FDFEFC;transition:border-color .15s ease, box-shadow .15s ease;
   }
   input:focus, select:focus, textarea:focus{outline:none;border-color:var(--pitch);box-shadow:0 0 0 3px rgba(27,67,50,0.12);}
