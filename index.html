@@ -30,9 +30,7 @@
       <button class="tab-btn" data-tab="join">Join</button>
       <button class="tab-btn" data-tab="roster">Roster</button>
       <button class="tab-btn" data-tab="vote">Matches</button>
-      <button class="tab-btn" data-tab="history">History</button>
       <button class="tab-btn" data-tab="board">Board</button>
-      <button class="tab-btn" data-tab="ideas">Ideas</button>
       <button class="tab-btn" data-tab="organizer">Organizer</button>
     </div>
   </div>
@@ -288,77 +286,78 @@
       </div>
     </div>
 
-    <div class="refresh-row" style="margin-top:20px;">
+    <div class="subtab-row" style="margin-top:20px;">
+      <button class="subtab-btn active" data-matches-subtab="upcoming">Upcoming</button>
+      <button class="subtab-btn" data-matches-subtab="past">Past</button>
+    </div>
+    <div class="refresh-row">
       <span class="pill-count" id="matchCount"></span>
       <button class="btn btn-ghost" id="refreshMatchesBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
     </div>
-    <div id="upcomingMatches"></div>
+    <div id="matchesList"></div>
   </section>
 
-  <!-- HISTORY TAB -->
-  <section id="tab-history" style="display:none;">
-    <div class="refresh-row">
-      <span class="pill-count" id="historyCount"></span>
-      <button class="btn btn-ghost" id="refreshHistoryBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
-    </div>
-    <div id="historyList"></div>
-  </section>
-
-  <!-- BOARD TAB -->
+  <!-- BOARD TAB (messages + ideas) -->
   <section id="tab-board" style="display:none;">
-    <div class="card">
-      <div class="eyebrow">Post a message</div>
-      <label class="field">
-        <span class="lbl">Name *</span>
-        <input type="text" id="b-name" placeholder="Your name">
-      </label>
-      <label class="field" style="margin-bottom:0;">
-        <span class="lbl">Message *</span>
-        <textarea id="b-message" placeholder="Say something to the group — no phone or email needed. Drop your Discord, Instagram, or whatever's easiest for people to reach you."></textarea>
-      </label>
-      <div id="boardMsg"></div>
-      <div style="margin-top:16px;">
-        <button class="btn btn-primary btn-block" id="postBtn">Post</button>
-      </div>
+    <div class="subtab-row">
+      <button class="subtab-btn active" data-board-subtab="messages">Messages</button>
+      <button class="subtab-btn" data-board-subtab="ideas">Ideas</button>
     </div>
-    <div class="refresh-row" style="margin-top:20px;">
-      <span class="pill-count" id="boardCount"></span>
-      <button class="btn btn-ghost" id="refreshBoardBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
-    </div>
-    <div id="boardList"></div>
-  </section>
 
-  <!-- IDEAS / SUGGESTIONS TAB -->
-  <section id="tab-ideas" style="display:none;">
-    <div class="card">
-      <div class="eyebrow">Send a suggestion</div>
-      <label class="field">
-        <span class="lbl">Name</span>
-        <input type="text" id="s-name" placeholder="Optional — anonymous is fine">
-      </label>
-      <label class="field">
-        <span class="lbl">Category</span>
-        <select id="s-category">
-          <option>Site feedback</option>
-          <option>Game format / rules</option>
-          <option>Where / when we play</option>
-          <option>Other</option>
-        </select>
-      </label>
-      <label class="field" style="margin-bottom:0;">
-        <span class="lbl">Suggestion *</span>
-        <textarea id="s-text" placeholder="What would make this better?"></textarea>
-      </label>
-      <div id="ideaMsg"></div>
-      <div style="margin-top:16px;">
-        <button class="btn btn-primary btn-block" id="ideaSubmitBtn">Send suggestion</button>
+    <div id="boardMessagesPane">
+      <div class="card">
+        <div class="eyebrow" style="margin-top:0;">Post a message</div>
+        <label class="field">
+          <span class="lbl">Name *</span>
+          <input type="text" id="b-name" placeholder="Your name">
+        </label>
+        <label class="field" style="margin-bottom:0;">
+          <span class="lbl">Message *</span>
+          <textarea id="b-message" placeholder="Say something to the group — no phone or email needed. Drop your Discord, Instagram, or whatever's easiest for people to reach you."></textarea>
+        </label>
+        <div id="boardMsg"></div>
+        <div style="margin-top:16px;">
+          <button class="btn btn-primary btn-block" id="postBtn">Post</button>
+        </div>
       </div>
+      <div class="refresh-row" style="margin-top:20px;">
+        <span class="pill-count" id="boardCount"></span>
+        <button class="btn btn-ghost" id="refreshBoardBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
+      </div>
+      <div id="boardList"></div>
     </div>
-    <div class="refresh-row" style="margin-top:20px;">
-      <span class="pill-count" id="ideaCount"></span>
-      <button class="btn btn-ghost" id="refreshIdeasBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
+
+    <div id="boardIdeasPane" style="display:none;">
+      <div class="card">
+        <div class="eyebrow" style="margin-top:0;">Send a suggestion</div>
+        <label class="field">
+          <span class="lbl">Name</span>
+          <input type="text" id="s-name" placeholder="Optional — anonymous is fine">
+        </label>
+        <label class="field">
+          <span class="lbl">Category</span>
+          <select id="s-category">
+            <option>Site feedback</option>
+            <option>Game format / rules</option>
+            <option>Where / when we play</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label class="field" style="margin-bottom:0;">
+          <span class="lbl">Suggestion *</span>
+          <textarea id="s-text" placeholder="What would make this better?"></textarea>
+        </label>
+        <div id="ideaMsg"></div>
+        <div style="margin-top:16px;">
+          <button class="btn btn-primary btn-block" id="ideaSubmitBtn">Send suggestion</button>
+        </div>
+      </div>
+      <div class="refresh-row" style="margin-top:20px;">
+        <span class="pill-count" id="ideaCount"></span>
+        <button class="btn btn-ghost" id="refreshIdeasBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
+      </div>
+      <div id="ideaList"></div>
     </div>
-    <div id="ideaList"></div>
   </section>
 
   <!-- ORGANIZER TAB -->

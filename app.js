@@ -338,9 +338,7 @@
     join: document.getElementById('tab-join'),
     roster: document.getElementById('tab-roster'),
     vote: document.getElementById('tab-vote'),
-    history: document.getElementById('tab-history'),
     board: document.getElementById('tab-board'),
-    ideas: document.getElementById('tab-ideas'),
     organizer: document.getElementById('tab-organizer'),
   };
   function activateTab(tab){
@@ -351,9 +349,7 @@
     if(location.hash !== '#'+tab) history.replaceState(null, '', '#'+tab);
     if(tab==='roster') renderRosterTab();
     if(tab==='vote') renderVoteTab();
-    if(tab==='history') renderHistoryTab();
-    if(tab==='board') renderBoardTab();
-    if(tab==='ideas') renderIdeasTab();
+    if(tab==='board'){ renderBoardTab(); renderIdeasTab(); }
     if(tab==='event') renderEventTab();
     if(tab==='organizer') renderOrganizerTab();
   }
@@ -758,10 +754,19 @@
       </div>`;
   }
 
+  let matchesSubtab = 'upcoming';
+  document.querySelectorAll('#tab-vote [data-matches-subtab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      matchesSubtab = btn.dataset.matchesSubtab;
+      document.querySelectorAll('#tab-vote [data-matches-subtab]').forEach(b=> b.classList.toggle('active', b===btn));
+      renderVoteTab();
+    });
+  });
+
   async function renderVoteTab(){
     const countEl = document.getElementById('matchCount');
-    const upcomingEl = document.getElementById('upcomingMatches');
-    upcomingEl.innerHTML = '<div class="spinner-row">Loading matches…</div>';
+    const listEl = document.getElementById('matchesList');
+    listEl.innerHTML = '<div class="spinner-row">Loading matches…</div>';
 
     const [matches, votes] = await Promise.all([getMatches(), getAllVotes()]);
     const votesByMatch = {};
@@ -770,43 +775,29 @@
       votesByMatch[v.match_id].push(v);
     });
 
-    const upcoming = matches.filter(m=> !isMatchClosed(m.match_date)).sort((a,b)=> new Date(a.match_date)-new Date(b.match_date));
+    if(matchesSubtab==='past'){
+      const past = matches.filter(m=> isMatchClosed(m.match_date)).sort((a,b)=> new Date(b.match_date)-new Date(a.match_date));
+      countEl.textContent = `${past.length} game${past.length===1?'':'s'} played`;
+      listEl.innerHTML = past.length
+        ? past.map(m=> renderMatchCard(m, votesByMatch[m.id]||[], false)).join('')
+        : `<div class="empty-state"><div class="display">No games played yet</div><p>Past matches will show up here once their date passes.</p></div>`;
+      return;
+    }
 
+    const upcoming = matches.filter(m=> !isMatchClosed(m.match_date)).sort((a,b)=> new Date(a.match_date)-new Date(b.match_date));
     countEl.textContent = `${upcoming.length} open match${upcoming.length===1?'':'es'}`;
-    upcomingEl.innerHTML = upcoming.length
+    listEl.innerHTML = upcoming.length
       ? upcoming.map(m=> renderMatchCard(m, votesByMatch[m.id]||[], true)).join('')
       : `<div class="empty-state"><div class="display">No matches proposed yet</div><p>Propose one above to get people voting.</p></div>`;
   }
   document.getElementById('refreshMatchesBtn').addEventListener('click', renderVoteTab);
 
-  // ---------- history tab (past games) ----------
-  async function renderHistoryTab(){
-    const countEl = document.getElementById('historyCount');
-    const listEl = document.getElementById('historyList');
-    listEl.innerHTML = '<div class="spinner-row">Loading history…</div>';
-
-    const [matches, votes] = await Promise.all([getMatches(), getAllVotes()]);
-    const votesByMatch = {};
-    votes.forEach(v=>{
-      if(!votesByMatch[v.match_id]) votesByMatch[v.match_id] = [];
-      votesByMatch[v.match_id].push(v);
-    });
-
-    const past = matches.filter(m=> isMatchClosed(m.match_date)).sort((a,b)=> new Date(b.match_date)-new Date(a.match_date));
-
-    countEl.textContent = `${past.length} game${past.length===1?'':'s'} played`;
-    listEl.innerHTML = past.length
-      ? past.map(m=> renderMatchCard(m, votesByMatch[m.id]||[], false)).join('')
-      : `<div class="empty-state"><div class="display">No games played yet</div><p>Past matches will show up here once their date passes.</p></div>`;
-  }
-  document.getElementById('refreshHistoryBtn').addEventListener('click', renderHistoryTab);
-
-  document.getElementById('upcomingMatches').addEventListener('change', (e)=>{
+  document.getElementById('matchesList').addEventListener('change', (e)=>{
     const item = e.target.closest('.check-item');
     if(item) item.classList.toggle('checked', e.target.checked);
   });
 
-  document.getElementById('upcomingMatches').addEventListener('focusout', async (e)=>{
+  document.getElementById('matchesList').addEventListener('focusout', async (e)=>{
     if(!e.target.classList.contains('match-vote-name')) return;
     const card = e.target.closest('[data-match-id]');
     const name = e.target.value.trim();
@@ -826,7 +817,7 @@
     });
   });
 
-  document.getElementById('upcomingMatches').addEventListener('click', async (e)=>{
+  document.getElementById('matchesList').addEventListener('click', async (e)=>{
     const btn = e.target.closest('.match-vote-submit');
     if(!btn) return;
     const card = btn.closest('[data-match-id]');
@@ -890,6 +881,8 @@
       document.getElementById('m-date').value = '';
       document.getElementById('m-note').value = '';
       msgEl.innerHTML = '<div class="msg msg-success">Match proposed — people can vote on it below!</div>';
+      matchesSubtab = 'upcoming';
+      document.querySelectorAll('#tab-vote [data-matches-subtab]').forEach(b=> b.classList.toggle('active', b.dataset.matchesSubtab==='upcoming'));
       await renderVoteTab();
     }catch(e){
       msgEl.innerHTML = '<div class="msg msg-error">Something went wrong proposing this match. Please try again.</div>';
@@ -899,7 +892,16 @@
     }
   });
 
-  // ---------- board tab ----------
+  // ---------- board tab (messages + ideas) ----------
+  document.querySelectorAll('#tab-board [data-board-subtab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const subtab = btn.dataset.boardSubtab;
+      document.querySelectorAll('#tab-board [data-board-subtab]').forEach(b=> b.classList.toggle('active', b===btn));
+      document.getElementById('boardMessagesPane').style.display = subtab==='messages' ? 'block' : 'none';
+      document.getElementById('boardIdeasPane').style.display = subtab==='ideas' ? 'block' : 'none';
+    });
+  });
+
   async function renderBoardTab(){
     const listEl = document.getElementById('boardList');
     const countEl = document.getElementById('boardCount');

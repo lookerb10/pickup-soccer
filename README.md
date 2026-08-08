@@ -6,7 +6,7 @@ A sign-up, roster, and scheduling site for a casual pickup soccer group. Static 
 
 ## How it's structured
 
-- `index.html` — page markup for all tabs (Home, Event, Join, Roster, Vote, History, Board, Ideas, Organizer)
+- `index.html` — page markup for all tabs (Home, Event, Join, Roster, Vote, Board, Organizer)
 - `styles.css` — all styling
 - `app.js` — all behavior: talks to Supabase directly via `fetch()` against its REST API (no client library, no build step)
 
@@ -27,10 +27,8 @@ then open `http://localhost:8000/index.html`. Since it's all client-side and tal
 - **Event** — announcement banner (shown on every tab) and a dedicated page for a one-off featured event, with live "In / Maybe / Can't make it" RSVPs backed by the `event_rsvps` table.
 - **Join** — roster sign-up (name, contact info, availability, preferences). No login. Blocks joining under an exact duplicate name (case-insensitive, whitespace-trimmed) already on the roster, so e.g. two people can't both be plain "Daniel" — "Daniel" and "Daniel L" are fine as distinct people. Enforced both client-side (checked before insert) and at the database level (`entries_name_unique_idx`, a unique index on `lower(trim(name))`), so it holds even under a race (double-click, two open tabs, etc.).
 - **Roster** — public list of everyone who joined (private-visibility entries hide contact details from everyone but the organizer).
-- **Vote** — anyone can propose a match (date + optional location + whether they're open to a full game, a practice, or either). Others vote on which time blocks work and can add a preferred location. Time slots close automatically once they're in the past. Voting again under the same name replaces your prior vote — you'll get a confirm prompt if that name already has a vote recorded, to catch accidental overwrites. A match is labeled 🎮 Game once 6+ people have voted (3v3 minimum); otherwise it shows as ⚽ Practice, unless the proposer specifically restricted it to one or the other.
-- **History** — read-only log of past matches (same card as Vote, minus the voting form), newest first, showing where and when the group actually played and the final turnout/results.
-- **Board** — free-form message posting, visible to everyone.
-- **Ideas** — suggestions with threaded comments.
+- **Vote** — anyone can propose a match (date + optional location + whether they're open to a full game, a practice, or either). Others vote on which time blocks work and can add a preferred location. Time slots close automatically once they're in the past. Voting again under the same name replaces your prior vote — you'll get a confirm prompt if that name already has a vote recorded, to catch accidental overwrites. A match is labeled 🎮 Game once 6+ people have voted (3v3 minimum); otherwise it shows as ⚽ Practice, unless the proposer specifically restricted it to one or the other. An Upcoming/Past toggle switches between open matches and a read-only history log (same card, minus the voting form) showing where and when the group has actually played.
+- **Board** — a Messages/Ideas toggle switches between free-form message posting (visible to everyone) and suggestions with threaded comments.
 - **Organizer** — gated by a shared passphrase (`settings.organizer_pin`), not a real login. Lets the organizer send board-post + email updates, edit their public contact info, and delete roster entries / board messages / suggestions / matches / individual votes.
 
 ## Supabase
