@@ -338,6 +338,7 @@
     join: document.getElementById('tab-join'),
     roster: document.getElementById('tab-roster'),
     vote: document.getElementById('tab-vote'),
+    history: document.getElementById('tab-history'),
     board: document.getElementById('tab-board'),
     ideas: document.getElementById('tab-ideas'),
     organizer: document.getElementById('tab-organizer'),
@@ -350,6 +351,7 @@
     if(location.hash !== '#'+tab) history.replaceState(null, '', '#'+tab);
     if(tab==='roster') renderRosterTab();
     if(tab==='vote') renderVoteTab();
+    if(tab==='history') renderHistoryTab();
     if(tab==='board') renderBoardTab();
     if(tab==='ideas') renderIdeasTab();
     if(tab==='event') renderEventTab();
@@ -749,7 +751,7 @@
           <span>${escapeHtml(formatDateLabel(match.match_date))}</span>
           <span class="pill-count">${voterCount} voted · ${matchStatusBadge(match, max)}</span>
         </div>
-        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">Proposed by ${escapeHtml(match.creator_name)}${match.note ? ` · ${escapeHtml(match.note)}` : ''}</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">Proposed by ${escapeHtml(match.creator_name)}${match.note ? ` · 📍 ${escapeHtml(match.note)}` : ''}</div>
         ${resultsHtml}
         ${locationHtml}
         ${formHtml}
@@ -759,8 +761,6 @@
   async function renderVoteTab(){
     const countEl = document.getElementById('matchCount');
     const upcomingEl = document.getElementById('upcomingMatches');
-    const pastWrapEl = document.getElementById('pastMatchesWrap');
-    const pastEl = document.getElementById('pastMatches');
     upcomingEl.innerHTML = '<div class="spinner-row">Loading matches…</div>';
 
     const [matches, votes] = await Promise.all([getMatches(), getAllVotes()]);
@@ -771,22 +771,35 @@
     });
 
     const upcoming = matches.filter(m=> !isMatchClosed(m.match_date)).sort((a,b)=> new Date(a.match_date)-new Date(b.match_date));
-    const past = matches.filter(m=> isMatchClosed(m.match_date)).sort((a,b)=> new Date(b.match_date)-new Date(a.match_date));
 
     countEl.textContent = `${upcoming.length} open match${upcoming.length===1?'':'es'}`;
     upcomingEl.innerHTML = upcoming.length
       ? upcoming.map(m=> renderMatchCard(m, votesByMatch[m.id]||[], true)).join('')
       : `<div class="empty-state"><div class="display">No matches proposed yet</div><p>Propose one above to get people voting.</p></div>`;
-
-    if(past.length){
-      pastWrapEl.style.display = 'block';
-      pastEl.innerHTML = past.map(m=> renderMatchCard(m, votesByMatch[m.id]||[], false)).join('');
-    }else{
-      pastWrapEl.style.display = 'none';
-      pastEl.innerHTML = '';
-    }
   }
   document.getElementById('refreshMatchesBtn').addEventListener('click', renderVoteTab);
+
+  // ---------- history tab (past games) ----------
+  async function renderHistoryTab(){
+    const countEl = document.getElementById('historyCount');
+    const listEl = document.getElementById('historyList');
+    listEl.innerHTML = '<div class="spinner-row">Loading history…</div>';
+
+    const [matches, votes] = await Promise.all([getMatches(), getAllVotes()]);
+    const votesByMatch = {};
+    votes.forEach(v=>{
+      if(!votesByMatch[v.match_id]) votesByMatch[v.match_id] = [];
+      votesByMatch[v.match_id].push(v);
+    });
+
+    const past = matches.filter(m=> isMatchClosed(m.match_date)).sort((a,b)=> new Date(b.match_date)-new Date(a.match_date));
+
+    countEl.textContent = `${past.length} game${past.length===1?'':'s'} played`;
+    listEl.innerHTML = past.length
+      ? past.map(m=> renderMatchCard(m, votesByMatch[m.id]||[], false)).join('')
+      : `<div class="empty-state"><div class="display">No games played yet</div><p>Past matches will show up here once their date passes.</p></div>`;
+  }
+  document.getElementById('refreshHistoryBtn').addEventListener('click', renderHistoryTab);
 
   document.getElementById('upcomingMatches').addEventListener('change', (e)=>{
     const item = e.target.closest('.check-item');

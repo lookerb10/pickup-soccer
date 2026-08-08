@@ -30,6 +30,7 @@
       <button class="tab-btn" data-tab="join">Join</button>
       <button class="tab-btn" data-tab="roster">Roster</button>
       <button class="tab-btn" data-tab="vote">Matches</button>
+      <button class="tab-btn" data-tab="history">History</button>
       <button class="tab-btn" data-tab="board">Board</button>
       <button class="tab-btn" data-tab="ideas">Ideas</button>
       <button class="tab-btn" data-tab="organizer">Organizer</button>
@@ -269,7 +270,7 @@
           <input type="date" id="m-date">
         </label>
         <label class="field">
-          <span class="lbl">Where / details</span>
+          <span class="lbl">Location</span>
           <input type="text" id="m-note" placeholder="Optional — field, park, etc.">
         </label>
       </div>
@@ -292,11 +293,15 @@
       <button class="btn btn-ghost" id="refreshMatchesBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
     </div>
     <div id="upcomingMatches"></div>
+  </section>
 
-    <div id="pastMatchesWrap" style="display:none;">
-      <div class="eyebrow" style="margin-top:26px;">Past matches</div>
-      <div id="pastMatches"></div>
+  <!-- HISTORY TAB -->
+  <section id="tab-history" style="display:none;">
+    <div class="refresh-row">
+      <span class="pill-count" id="historyCount"></span>
+      <button class="btn btn-ghost" id="refreshHistoryBtn" style="padding:8px 14px;font-size:13px;">↻ Refresh</button>
     </div>
+    <div id="historyList"></div>
   </section>
 
   <!-- BOARD TAB -->
