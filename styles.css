@@ -53,11 +53,11 @@
 
   /* Scoreboard header */
   .scoreboard{background:var(--pitch-dark);color:var(--chalk);}
-  .scoreboard-inner{max-width:760px;margin:0 auto;padding:28px 20px 0;}
-  .title-row{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .scoreboard-inner{max-width:760px;margin:0 auto;padding:28px 20px 0;text-align:center;}
+  .title-row{display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:8px;}
   .title{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:0.03em;margin:0;color:var(--chalk);}
   .stat-line{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--turf);text-transform:uppercase;letter-spacing:0.08em;}
-  .tabs{display:flex;gap:4px;margin-top:20px;background:rgba(255,255,255,0.06);padding:4px;border-radius:10px;max-width:520px;}
+  .tabs{display:flex;gap:4px;margin:20px auto 0;background:rgba(255,255,255,0.06);padding:4px;border-radius:10px;max-width:520px;}
   .tab-btn{position:relative;flex:1;border:none;background:transparent;color:rgba(241,244,236,0.65);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;padding:11px 8px;border-radius:7px;cursor:pointer;transition:background .15s ease, color .15s ease;}
   .tab-ribbon{position:absolute;top:-6px;right:2px;background:var(--cone);color:#241600;font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;padding:2px 5px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.35);}
   .tab-btn.active{background:var(--cone);color:#1B1400;font-weight:600;}
