@@ -4,6 +4,9 @@
     'we-morning':'Weekend AM','we-afternoon':'Weekend PM','we-evening':'Weekend eve'
   };
 
+  const CONTACT_PREF_LABELS = { text:'📱 Text', whatsapp:'💬 WhatsApp', email:'📧 Email' };
+  const NOTIFY_PREF_LABELS = { every_game:'🔔 Notify every game', self_check:'👀 Checks site themself' };
+
   const POLL_TIME_RANGES = [
     {key:'8-10', startHour:8, endHour:10, label:'8 – 10am'},
     {key:'10-12', startHour:10, endHour:12, label:'10am – 12pm'},
@@ -121,6 +124,8 @@
       name: row.name,
       phone: row.phone,
       email: row.email,
+      contactPref: row.contact_pref,
+      notifyPref: row.notify_pref,
       frequency: row.frequency,
       experience: row.experience,
       intensity: row.intensity,
@@ -149,6 +154,7 @@
       headers:{ 'Prefer':'return=representation' },
       body: JSON.stringify({
         name: entry.name, phone: entry.phone, email: entry.email,
+        contact_pref: entry.contactPref, notify_pref: entry.notifyPref,
         frequency: entry.frequency, experience: entry.experience, intensity: entry.intensity,
         position: entry.position, age: entry.age, notes: entry.notes,
         availability: entry.availability, visibility: entry.visibility
@@ -543,6 +549,8 @@
     const name = document.getElementById('f-name').value.trim();
     const phone = document.getElementById('f-phone').value.trim();
     const email = document.getElementById('f-email').value.trim();
+    const contactPref = document.getElementById('f-contact-pref').value;
+    const notifyPref = document.getElementById('f-notify-pref').value;
     const frequency = document.getElementById('f-frequency').value;
     const experience = document.getElementById('f-experience').value;
     const intensity = document.getElementById('f-intensity').value;
@@ -553,8 +561,8 @@
     const availability = Array.from(document.querySelectorAll('#f-availability input:checked'))
       .map(i=>i.closest('.check-item').dataset.slot);
 
-    if(!name || !frequency || !experience || !intensity || (!phone && !email)){
-      msgEl.innerHTML = '<div class="msg msg-error">Please fill in your name, at least one contact method, frequency, experience, and intensity.</div>';
+    if(!name || !contactPref || !notifyPref || !frequency || !experience || !intensity || (!phone && !email)){
+      msgEl.innerHTML = '<div class="msg msg-error">Please fill in your name, at least one contact method, your communication preferences, frequency, experience, and intensity.</div>';
       return;
     }
 
@@ -571,7 +579,7 @@
       }
 
       const entry = await insertEntry({
-        name, phone, email, frequency, experience, intensity, position, age, notes,
+        name, phone, email, contactPref, notifyPref, frequency, experience, intensity, position, age, notes,
         availability, visibility
       });
 
@@ -608,6 +616,8 @@
     const tags = [entry.frequency, entry.experience, entry.intensity];
     if(entry.position && entry.position!=='No preference') tags.push(entry.position);
     if(entry.age && entry.age!=='Prefer not to say') tags.push(entry.age);
+    if(CONTACT_PREF_LABELS[entry.contactPref]) tags.push(CONTACT_PREF_LABELS[entry.contactPref]);
+    if(NOTIFY_PREF_LABELS[entry.notifyPref]) tags.push(NOTIFY_PREF_LABELS[entry.notifyPref]);
     (entry.availability||[]).forEach(slot=> tags.push(AVAILABILITY_LABELS[slot] || slot));
     return tags;
   }
@@ -1152,6 +1162,13 @@
     const comments = await getComments();
     const commentsBySuggestion = groupCommentsBySuggestion(comments);
     const emailCount = sorted.filter(p=>p.email).length;
+    const contactCounts = { text:0, whatsapp:0, email:0 };
+    const notifyCounts = { every_game:0, self_check:0 };
+    sorted.forEach(p=>{
+      if(contactCounts[p.contactPref]!==undefined) contactCounts[p.contactPref]++;
+      if(notifyCounts[p.notifyPref]!==undefined) notifyCounts[p.notifyPref]++;
+    });
+    const unsetPrefCount = sorted.filter(p=> !p.contactPref).length;
 
     const rows = sorted.map(p=>{
       const contactLine = [p.phone, p.email].filter(Boolean).map(escapeHtml).join(' · ') || '—';
@@ -1257,6 +1274,13 @@
           <button class="btn btn-ghost" id="lockBtn" style="padding:6px 12px;font-size:12px;">Lock</button>
         </div>
       </div>
+
+      <div class="eyebrow" style="margin-top:0;">Communication preferences</div>
+      <p style="font-size:13px;color:var(--ink-soft);margin:-8px 0 0;">
+        📱 ${contactCounts.text} text · 💬 ${contactCounts.whatsapp} WhatsApp · 📧 ${contactCounts.email} email
+        &nbsp;|&nbsp; 🔔 ${notifyCounts.every_game} want notified every game · 👀 ${notifyCounts.self_check} check themselves
+        ${unsetPrefCount ? `<br>(${unsetPrefCount} signed up before this was added, so haven't said)` : ''}
+      </p>
 
       <div class="eyebrow">Send an update</div>
       <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:12px;">Posts to the Board (everyone sees it there) and emails whoever you select below.</p>

@@ -25,7 +25,7 @@ then open `http://localhost:8000/index.html`. Since it's all client-side and tal
 ## Tabs / features
 
 - **Event** — announcement banner (shown on every tab) and a dedicated page for a one-off featured event, with live "In / Maybe / Can't make it" RSVPs backed by the `event_rsvps` table.
-- **Join** — roster sign-up (name, contact info, availability, preferences). No login. Blocks joining under an exact duplicate name (case-insensitive, whitespace-trimmed) already on the roster, so e.g. two people can't both be plain "Daniel" — "Daniel" and "Daniel L" are fine as distinct people. Enforced both client-side (checked before insert) and at the database level (`entries_name_unique_idx`, a unique index on `lower(trim(name))`), so it holds even under a race (double-click, two open tabs, etc.).
+- **Join** — roster sign-up (name, contact info, availability, preferences), including preferred contact method (text/WhatsApp/email) and whether they want to be notified about every proposed game or would rather check the site themselves — the Organizer tab rolls these up into a summary to help decide the most effective way to reach the group. No login. Blocks joining under an exact duplicate name (case-insensitive, whitespace-trimmed) already on the roster, so e.g. two people can't both be plain "Daniel" — "Daniel" and "Daniel L" are fine as distinct people. Enforced both client-side (checked before insert) and at the database level (`entries_name_unique_idx`, a unique index on `lower(trim(name))`), so it holds even under a race (double-click, two open tabs, etc.).
 - **Roster** — public list of everyone who joined (private-visibility entries hide contact details from everyone but the organizer).
 - **Vote** — anyone can propose a match (date + optional location + whether they're open to a full game, a practice, or either). Others vote on which time blocks work and can add a preferred location. Time slots close automatically once they're in the past. Voting again under the same name replaces your prior vote — you'll get a confirm prompt if that name already has a vote recorded, to catch accidental overwrites. A match is labeled 🎮 Game once 6+ people have voted (3v3 minimum); otherwise it shows as ⚽ Practice, unless the proposer specifically restricted it to one or the other. An Upcoming/Past toggle switches between open matches and a read-only history log (same card, minus the voting form) showing where and when the group has actually played.
 - **Board** — a Messages/Ideas toggle switches between free-form message posting (visible to everyone) and suggestions with threaded comments.
@@ -39,7 +39,7 @@ Current tables:
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `entries` | Roster sign-ups | `name`, `phone`, `email`, `frequency`, `experience`, `intensity`, `position`, `age`, `notes`, `availability` (text[]), `visibility` (`public`/`private`), `jersey_number`, `submitted_at` |
+| `entries` | Roster sign-ups | `name`, `phone`, `email`, `contact_pref` (`text`/`whatsapp`/`email`), `notify_pref` (`every_game`/`self_check`), `frequency`, `experience`, `intensity`, `position`, `age`, `notes`, `availability` (text[]), `visibility` (`public`/`private`), `jersey_number`, `submitted_at` |
 | `messages` | Board posts | `author`, `message`, `created_at` |
 | `suggestions` | Ideas tab entries | `author`, `category`, `suggestion`, `created_at` |
 | `comments` | Replies to suggestions | `suggestion_id`, `author`, `comment`, `created_at` |
@@ -60,6 +60,7 @@ create table entries (
   jersey_number int generated always as identity,
   name text not null,
   phone text, email text,
+  contact_pref text, notify_pref text,
   frequency text, experience text, intensity text, position text, age text,
   notes text,
   availability text[],
