@@ -13,6 +13,18 @@
     {key:'18-20', startHour:18, endHour:20, label:'6 – 8pm'},
   ];
 
+  const DEFAULT_EVENT_DETAILS = {
+    bannerText: '🎉 Season Kickoff Party · Sat, Aug 29 @ 8:00 AM · John Venezia Community Park',
+    eyebrow: 'Season Kickoff Party',
+    title: "Let's launch this thing right.",
+    body: "This is the one that kicks it all off — not just a game, a party. The field's fully stocked: full-size goals (not the flimsy pop-up kind), rebounder nets, agility ladders, hurdles, poles, and a bag full of balls. Come kick around, run a few drills, or just meet the group.\n\nWe're bringing chairs and yard games too, so swing by even if you're not sure about playing. All ages, all skill levels, zero pressure — bring a friend.\n\nThere'll be refreshments and snacks on hand to keep everyone fueled — and if we get a solid turnout, we're pulling a raffle on the spot with a prize for one lucky winner. More people, better odds.",
+    date: 'Saturday, August 29',
+    time: '8:00 – 10:00 AM',
+    field: 'John Venezia Community Park',
+    cost: 'Free',
+    directionsUrl: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('3555 Briargate Pkwy, Colorado Springs, CO 80920')
+  };
+
   const GAME_HEADCOUNT = 6;
   function matchStatusBadge(match, bestSlotCount){
     const wantsGame = match.wants_game !== false;
@@ -301,6 +313,22 @@
       body: JSON.stringify({ name, status, guests })
     });
   }
+  async function getEventDetails(){
+    try{
+      const res = await sb('settings?key=eq.event_details&select=value');
+      const rows = await res.json();
+      return rows.length ? JSON.parse(rows[0].value) : null;
+    }catch(e){
+      return null;
+    }
+  }
+  async function setEventDetails(details){
+    return sb('settings', {
+      method:'POST',
+      headers:{ 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify({ key:'event_details', value: JSON.stringify(details) })
+    });
+  }
 
   // ---------- tabs ----------
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -383,6 +411,32 @@
     });
   })();
 
+  // ---------- event details (editable hero + banner) ----------
+  function renderEventHero(details){
+    const d = details || DEFAULT_EVENT_DETAILS;
+    const bannerText = document.getElementById('eventBannerText');
+    if(bannerText) bannerText.textContent = d.bannerText;
+    const eyebrow = document.getElementById('eventHeroEyebrow');
+    if(eyebrow) eyebrow.textContent = d.eyebrow;
+    const title = document.getElementById('eventHeroTitle');
+    if(title) title.textContent = d.title;
+    const bodyEl = document.getElementById('eventHeroBody');
+    if(bodyEl){
+      bodyEl.innerHTML = (d.body||'').split(/\n\s*\n/).filter(p=>p.trim()).map(p=>`<p class="event-hero-body">${escapeHtml(p.trim())}</p>`).join('');
+    }
+    const dateEl = document.getElementById('eventMetaDate'); if(dateEl) dateEl.textContent = d.date;
+    const timeEl = document.getElementById('eventMetaTime'); if(timeEl) timeEl.textContent = d.time;
+    const fieldEl = document.getElementById('eventMetaField'); if(fieldEl) fieldEl.textContent = d.field;
+    const costEl = document.getElementById('eventMetaCost'); if(costEl) costEl.textContent = d.cost;
+    const dirLink = document.getElementById('eventDirectionsLink'); if(dirLink) dirLink.href = d.directionsUrl;
+  }
+  async function loadEventDetails(){
+    const details = (await getEventDetails()) || DEFAULT_EVENT_DETAILS;
+    renderEventHero(details);
+    return details;
+  }
+  loadEventDetails();
+
   // ---------- event tab (RSVP) ----------
   let selectedRsvpStatus = null;
   document.querySelectorAll('#rsvpRow .rsvp-btn').forEach(btn=>{
@@ -426,6 +480,7 @@
     const listEl = document.getElementById('rsvpList');
     const countEl = document.getElementById('rsvpCount');
     listEl.innerHTML = '<div class="spinner-row">Loading RSVPs…</div>';
+    await loadEventDetails();
     const rsvps = await getEventRsvps();
     const inList = rsvps.filter(r=>r.status==='in');
     const maybeList = rsvps.filter(r=>r.status==='maybe');
@@ -1181,7 +1236,8 @@
     gate.innerHTML = `
       <div class="eyebrow" style="display:flex;justify-content:space-between;align-items:center;margin-top:0;">
         <span>Full roster (${sorted.length})</span>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost" id="editEventBtn" style="padding:6px 12px;font-size:12px;">Edit event details</button>
           <button class="btn btn-ghost" id="editContactBtn" style="padding:6px 12px;font-size:12px;">Edit my contact info</button>
           <button class="btn btn-ghost" id="lockBtn" style="padding:6px 12px;font-size:12px;">Lock</button>
         </div>
@@ -1295,6 +1351,59 @@
         btn.disabled = false;
         btn.textContent = emailEnabled() ? `Post & email ${recipientCount} player${recipientCount===1?'':'s'}` : 'Post update';
       }
+    });
+
+    document.getElementById('editEventBtn').addEventListener('click', async ()=>{
+      const details = (await getEventDetails()) || DEFAULT_EVENT_DETAILS;
+      const formHtml = `
+        <div class="card" style="margin-bottom:16px;">
+          <div class="eyebrow" style="margin-top:0;">Edit event details</div>
+          <label class="field"><span class="lbl">Banner text</span><input type="text" id="editEvtBanner" value="${escapeHtml(details.bannerText||'')}"></label>
+          <label class="field"><span class="lbl">Eyebrow</span><input type="text" id="editEvtEyebrow" value="${escapeHtml(details.eyebrow||'')}"></label>
+          <label class="field"><span class="lbl">Title</span><input type="text" id="editEvtTitle" value="${escapeHtml(details.title||'')}"></label>
+          <label class="field">
+            <span class="lbl">Description</span>
+            <textarea id="editEvtBody" style="min-height:120px;">${escapeHtml(details.body||'')}</textarea>
+            <span class="hint">Separate paragraphs with a blank line.</span>
+          </label>
+          <div class="grid2">
+            <label class="field"><span class="lbl">Date</span><input type="text" id="editEvtDate" value="${escapeHtml(details.date||'')}"></label>
+            <label class="field"><span class="lbl">Time</span><input type="text" id="editEvtTime" value="${escapeHtml(details.time||'')}"></label>
+          </div>
+          <div class="grid2">
+            <label class="field"><span class="lbl">Field / location</span><input type="text" id="editEvtField" value="${escapeHtml(details.field||'')}"></label>
+            <label class="field"><span class="lbl">Cost</span><input type="text" id="editEvtCost" value="${escapeHtml(details.cost||'')}"></label>
+          </div>
+          <label class="field"><span class="lbl">Directions link</span><input type="url" id="editEvtDirections" value="${escapeHtml(details.directionsUrl||'')}"></label>
+          <div id="editEventMsg"></div>
+          <div style="display:flex;gap:10px;margin-top:12px;">
+            <button class="btn btn-primary" id="saveEventBtn" style="flex:1;">Save</button>
+            <button class="btn btn-ghost" id="cancelEventBtn" style="flex:1;">Cancel</button>
+          </div>
+        </div>`;
+      gate.insertAdjacentHTML('afterbegin', formHtml);
+      document.getElementById('cancelEventBtn').addEventListener('click', renderOrganizerFull);
+      document.getElementById('saveEventBtn').addEventListener('click', async ()=>{
+        const msgEl = document.getElementById('editEventMsg');
+        const newDetails = {
+          bannerText: document.getElementById('editEvtBanner').value.trim(),
+          eyebrow: document.getElementById('editEvtEyebrow').value.trim(),
+          title: document.getElementById('editEvtTitle').value.trim(),
+          body: document.getElementById('editEvtBody').value.trim(),
+          date: document.getElementById('editEvtDate').value.trim(),
+          time: document.getElementById('editEvtTime').value.trim(),
+          field: document.getElementById('editEvtField').value.trim(),
+          cost: document.getElementById('editEvtCost').value.trim(),
+          directionsUrl: document.getElementById('editEvtDirections').value.trim()
+        };
+        try{
+          await setEventDetails(newDetails);
+          renderEventHero(newDetails);
+          renderOrganizerFull();
+        }catch(e){
+          msgEl.innerHTML = '<div class="msg msg-error">Could not save. Try again.</div>';
+        }
+      });
     });
 
     document.getElementById('editContactBtn').addEventListener('click', async ()=>{

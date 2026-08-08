@@ -13,7 +13,7 @@
 
 <div class="event-banner" id="eventBanner">
   <div class="event-banner-inner">
-    <span class="event-banner-text"><strong>🎉 Season Kickoff Party</strong> · Sat, Aug 29 @ 8:00 AM · Frank Castello Park</span>
+    <span class="event-banner-text" id="eventBannerText">🎉 Season Kickoff Party · Sat, Aug 29 @ 8:00 AM · Frank Castello Park</span>
     <button class="event-banner-cta" id="eventBannerBtn">See details →</button>
   </div>
 </div>
@@ -76,24 +76,16 @@
   <!-- EVENT TAB -->
   <section id="tab-event" style="display:none;">
     <div class="card event-hero">
-      <div class="event-hero-eyebrow">Season Kickoff Party</div>
-      <div class="display event-hero-title">Let's launch this thing right.</div>
-      <p class="event-hero-body">
-        This is the one that kicks it all off — not just a game, a party. The field's fully stocked: full-size goals (not the flimsy pop-up kind), rebounder nets, agility ladders, hurdles, poles, and a bag full of balls. Come kick around, run a few drills, or just meet the group.
-      </p>
-      <p class="event-hero-body">
-        We're bringing chairs and yard games too, so swing by even if you're not sure about playing. All ages, all skill levels, zero pressure — bring a friend.
-      </p>
-      <p class="event-hero-body">
-        There'll be refreshments and snacks on hand to keep everyone fueled — and if we get a solid turnout, we're pulling a raffle on the spot with a prize for one lucky winner. More people, better odds.
-      </p>
+      <div class="event-hero-eyebrow" id="eventHeroEyebrow">Season Kickoff Party</div>
+      <div class="display event-hero-title" id="eventHeroTitle">Let's launch this thing right.</div>
+      <div id="eventHeroBody"></div>
       <div class="event-meta-grid">
-        <div class="event-meta"><span class="event-meta-label">Date</span><span class="event-meta-value">Saturday, August 29</span></div>
-        <div class="event-meta"><span class="event-meta-label">Time</span><span class="event-meta-value">8:00 – 10:00 AM</span></div>
-        <div class="event-meta"><span class="event-meta-label">Field</span><span class="event-meta-value">Frank Castello Park</span></div>
-        <div class="event-meta"><span class="event-meta-label">Cost</span><span class="event-meta-value">Free</span></div>
+        <div class="event-meta"><span class="event-meta-label">Date</span><span class="event-meta-value" id="eventMetaDate">Saturday, August 29</span></div>
+        <div class="event-meta"><span class="event-meta-label">Time</span><span class="event-meta-value" id="eventMetaTime">8:00 – 10:00 AM</span></div>
+        <div class="event-meta"><span class="event-meta-label">Field</span><span class="event-meta-value" id="eventMetaField">Frank Castello Park</span></div>
+        <div class="event-meta"><span class="event-meta-label">Cost</span><span class="event-meta-value" id="eventMetaCost">Free</span></div>
       </div>
-      <a class="btn btn-ghost event-directions-btn" href="https://maps.app.goo.gl/NyADmUfdBzvxYMow5?g_st=ic" target="_blank" rel="noopener">📍 Get directions →</a>
+      <a class="btn btn-ghost event-directions-btn" id="eventDirectionsLink" href="https://maps.app.goo.gl/NyADmUfdBzvxYMow5?g_st=ic" target="_blank" rel="noopener">📍 Get directions →</a>
     </div>
 
     <div class="card">
