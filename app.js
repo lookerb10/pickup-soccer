@@ -368,6 +368,12 @@
   if(initialTab && initialTab !== 'home' && panels[initialTab]){
     activateTab(initialTab);
   }
+  // also handle the hash changing while the page is already open (e.g. editing
+  // the address bar or clicking a #organizer link without a full page reload)
+  window.addEventListener('hashchange', ()=>{
+    const tab = location.hash.replace('#','') || 'home';
+    if(panels[tab]) activateTab(tab);
+  });
 
   document.getElementById('homeJoinBtn').addEventListener('click', ()=>{
     document.querySelector('[data-tab="join"]').click();
